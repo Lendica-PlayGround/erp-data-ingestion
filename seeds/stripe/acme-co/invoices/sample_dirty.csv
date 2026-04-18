@@ -1,0 +1,4 @@
+id,number,customer,customer_email,currency,amount_due,amount_paid,amount_remaining,status,created,due_date,finalized_at,description,legacy_flag
+in_1Abc101,INV-0101,cus_Abc001,alice@acme.example,usd,33300,0,33300,open,1713744000,1714348800,1713744000,Invoice with extra source column,Y
+in_1Abc102,INV-0102,cus_Abc002,bob@acme.example,usd,,0,,finalized,1713830400,1714435200,1713830400,Missing amount + unknown status,N
+in_1Abc103,INV-0103,cus_Abc003,charlie@acme.example,EUR,12099,0,12099,open,1713916800,1714521600,1713916800,"Café membership – renouvellement",Y

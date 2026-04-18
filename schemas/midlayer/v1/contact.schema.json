@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://erp-data-ingestion/schemas/midlayer/v1/contact.schema.json",
+  "title": "MidLayer Contact v1",
+  "description": "Canonical mid-layer Contact schema, aligned with merge.dev CRM Contact common model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "external_id",
+    "_source_system",
+    "_source_record_id",
+    "_company_id",
+    "_ingested_at",
+    "_source_file",
+    "_mapping_version",
+    "_row_hash"
+  ],
+  "properties": {
+    "external_id": { "type": "string" },
+    "first_name": { "type": ["string", "null"] },
+    "last_name": { "type": ["string", "null"] },
+    "account_external_id": {
+      "type": ["string", "null"],
+      "description": "External id of a linked Account (company)."
+    },
+    "addresses": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of Address objects."
+    },
+    "email_addresses": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of {value, email_address_type} objects."
+    },
+    "phone_numbers": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of {value, phone_number_type} objects."
+    },
+    "last_activity_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "remote_created_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "remote_was_deleted": {
+      "type": "boolean",
+      "default": false
+    },
+    "_unmapped": { "type": ["string", "null"] },
+    "_source_system": { "type": "string" },
+    "_source_record_id": { "type": "string" },
+    "_company_id": { "type": "string" },
+    "_ingested_at": { "type": "string", "format": "date-time" },
+    "_source_file": { "type": "string" },
+    "_mapping_version": { "type": "string" },
+    "_row_hash": { "type": "string" }
+  }
+}
