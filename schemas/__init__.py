@@ -1,1 +1,0 @@
-"""Mid-layer schema package."""

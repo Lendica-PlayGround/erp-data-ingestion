@@ -1,4 +1,0 @@
-id,number,customer,customer_email,currency,amount_due,amount_paid,amount_remaining,status,created,due_date,finalized_at,description
-in_1Abc001,INV-0001,cus_Abc001,alice@acme.example,usd,125000,125000,0,paid,1711929600,1712534400,1711929600,Q1 consulting
-in_1Abc002,INV-0002,cus_Abc002,bob@acme.example,usd,49900,0,49900,open,1712534400,1713139200,1712534400,Plan: Starter
-in_1Abc003,INV-0003,cus_Abc001,alice@acme.example,eur,87250,0,87250,open,1713139200,1713744000,1713139200,EU billing
