@@ -1,9 +1,24 @@
 """Pydantic v2 models mirroring the mid-layer v1 JSON Schemas.
 
-The field order here is the canonical CSV header order for each table
-(`schema_field_order()`). JSON Schemas in `schemas/midlayer/v1/*.schema.json`
-remain the public contract; these models exist for runtime validation and
-for authoritative header ordering.
+Two important details:
+
+1. The field order here is the canonical CSV header order for each table
+   (see ``INVOICE_COLUMNS`` / ``CUSTOMER_COLUMNS`` / ``CONTACT_COLUMNS``).
+2. The metadata columns (``_source_system``, ``_row_hash``, …) use Python
+   attribute names **without** the leading underscore and declare the
+   underscore-prefixed CSV/JSON column name via ``Field(alias=...)``. In
+   Pydantic v2 a leading-underscore identifier is treated as a private
+   attribute and is silently skipped by validation and serialization, which
+   would quietly break the contract. Using aliases lets us validate and
+   round-trip the on-the-wire names while keeping the Python attributes
+   ergonomic.
+
+Construct models with either keyword (``source_system=...``) or alias
+(``**{"_source_system": ...}``) forms; dump with ``model_dump(by_alias=True)``
+or ``model_dump_json(by_alias=True)`` to get the canonical column names back.
+JSON Schemas in ``midlayer-schema-guide/midlayer/v1/*.schema.json`` remain the
+public contract; these models exist for runtime validation and for
+authoritative header ordering.
 """
 from __future__ import annotations
 
@@ -26,22 +41,15 @@ InvoiceType = Literal["ACCOUNTS_RECEIVABLE", "ACCOUNTS_PAYABLE"]
 CustomerStatus = Literal["ACTIVE", "ARCHIVED"]
 
 
-class _MidLayerBase(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=False)
-
-    _unmapped: Optional[str] = None  # minified JSON string
-    # Metadata (set by the mapper/writer, required on every row)
-    _source_system: str
-    _source_record_id: str
-    _company_id: str
-    _ingested_at: datetime
-    _source_file: str
-    _mapping_version: str
-    _row_hash: str
+_MIDLAYER_MODEL_CONFIG = ConfigDict(
+    extra="forbid",
+    populate_by_name=True,
+    str_strip_whitespace=False,
+)
 
 
 class Invoice(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = _MIDLAYER_MODEL_CONFIG
 
     external_id: str
     type: Optional[InvoiceType] = None
@@ -60,18 +68,19 @@ class Invoice(BaseModel):
     balance: Optional[str] = None
     status: Optional[InvoiceStatus] = None
     remote_was_deleted: bool = False
-    _unmapped: Optional[str] = None
-    _source_system: str = ""
-    _source_record_id: str = ""
-    _company_id: str = ""
-    _ingested_at: Optional[datetime] = None
-    _source_file: str = ""
-    _mapping_version: str = ""
-    _row_hash: str = ""
+
+    unmapped: Optional[str] = Field(default=None, alias="_unmapped")
+    source_system: str = Field(alias="_source_system")
+    source_record_id: str = Field(alias="_source_record_id")
+    company_id: str = Field(alias="_company_id")
+    ingested_at: datetime = Field(alias="_ingested_at")
+    source_file: str = Field(alias="_source_file")
+    mapping_version: str = Field(alias="_mapping_version")
+    row_hash: str = Field(alias="_row_hash")
 
 
 class Customer(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = _MIDLAYER_MODEL_CONFIG
 
     external_id: str
     name: Optional[str] = None
@@ -85,18 +94,19 @@ class Customer(BaseModel):
     phone_number: Optional[str] = None
     addresses: Optional[str] = None
     remote_was_deleted: bool = False
-    _unmapped: Optional[str] = None
-    _source_system: str = ""
-    _source_record_id: str = ""
-    _company_id: str = ""
-    _ingested_at: Optional[datetime] = None
-    _source_file: str = ""
-    _mapping_version: str = ""
-    _row_hash: str = ""
+
+    unmapped: Optional[str] = Field(default=None, alias="_unmapped")
+    source_system: str = Field(alias="_source_system")
+    source_record_id: str = Field(alias="_source_record_id")
+    company_id: str = Field(alias="_company_id")
+    ingested_at: datetime = Field(alias="_ingested_at")
+    source_file: str = Field(alias="_source_file")
+    mapping_version: str = Field(alias="_mapping_version")
+    row_hash: str = Field(alias="_row_hash")
 
 
 class Contact(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = _MIDLAYER_MODEL_CONFIG
 
     external_id: str
     first_name: Optional[str] = None
@@ -108,19 +118,21 @@ class Contact(BaseModel):
     last_activity_at: Optional[datetime] = None
     remote_created_at: Optional[datetime] = None
     remote_was_deleted: bool = False
-    _unmapped: Optional[str] = None
-    _source_system: str = ""
-    _source_record_id: str = ""
-    _company_id: str = ""
-    _ingested_at: Optional[datetime] = None
-    _source_file: str = ""
-    _mapping_version: str = ""
-    _row_hash: str = ""
+
+    unmapped: Optional[str] = Field(default=None, alias="_unmapped")
+    source_system: str = Field(alias="_source_system")
+    source_record_id: str = Field(alias="_source_record_id")
+    company_id: str = Field(alias="_company_id")
+    ingested_at: datetime = Field(alias="_ingested_at")
+    source_file: str = Field(alias="_source_file")
+    mapping_version: str = Field(alias="_mapping_version")
+    row_hash: str = Field(alias="_row_hash")
 
 
 # Canonical CSV header order per table: public fields, then _unmapped, then metadata.
 # We enumerate explicitly rather than using `model_fields` so that the order is
-# stable against future field additions.
+# stable against future field additions. These names match the CSV/JSON
+# aliases (leading-underscore for metadata), NOT the Python attribute names.
 INVOICE_COLUMNS: list[str] = [
     "external_id",
     "type",
@@ -203,6 +215,17 @@ TABLE_MODELS: dict[str, type[BaseModel]] = {
     "invoices": Invoice,
     "customers": Customer,
     "contacts": Contact,
+}
+
+# Columns that participate in `_row_hash` (mapped public fields only — never
+# `_unmapped` or metadata). Order is documentation; the hash itself sorts keys
+# alphabetically, see schema guide §7.1.
+ROW_HASH_COLUMNS: dict[str, list[str]] = {
+    table: [c for c in cols if not c.startswith("_") and c != "remote_was_deleted"]
+    # `remote_was_deleted` is intentionally included in the hash so tombstone
+    # flips produce a new hash and propagate through delta dedupe.
+    + (["remote_was_deleted"] if "remote_was_deleted" in cols else [])
+    for table, cols in TABLE_COLUMNS.items()
 }
 
 SCHEMA_VERSION = "v1"

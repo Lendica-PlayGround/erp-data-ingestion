@@ -25,15 +25,15 @@
     },
     "addresses": {
       "type": ["string", "null"],
-      "description": "Minified JSON array of Address objects."
+      "description": "Minified JSON array of merge.dev Address objects. Keys alphabetically sorted; absent sub-fields omitted."
     },
     "email_addresses": {
       "type": ["string", "null"],
-      "description": "Minified JSON array of {value, email_address_type} objects."
+      "description": "Minified JSON array of {email_address, email_address_type} objects (merge.dev CRM EmailAddress)."
     },
     "phone_numbers": {
       "type": ["string", "null"],
-      "description": "Minified JSON array of {value, phone_number_type} objects."
+      "description": "Minified JSON array of {phone_number, phone_number_type} objects (merge.dev CRM PhoneNumber)."
     },
     "last_activity_at": {
       "type": ["string", "null"],
@@ -45,15 +45,41 @@
     },
     "remote_was_deleted": {
       "type": "boolean",
-      "default": false
+      "default": false,
+      "description": "true when the source tombstoned the record. Row is still emitted so deletes propagate."
     },
-    "_unmapped": { "type": ["string", "null"] },
-    "_source_system": { "type": "string" },
-    "_source_record_id": { "type": "string" },
-    "_company_id": { "type": "string" },
-    "_ingested_at": { "type": "string", "format": "date-time" },
-    "_source_file": { "type": "string" },
-    "_mapping_version": { "type": "string" },
-    "_row_hash": { "type": "string" }
+    "_unmapped": {
+      "type": ["string", "null"],
+      "description": "Minified JSON object preserving source columns the mapper could not map. `{}` or empty string when none."
+    },
+    "_source_system": {
+      "type": "string",
+      "description": "Slug identifying source system (e.g. 'stripe', 'google_sheets')."
+    },
+    "_source_record_id": {
+      "type": "string",
+      "description": "Raw source row id before any normalization."
+    },
+    "_company_id": {
+      "type": "string",
+      "description": "Internal tenant/company identifier."
+    },
+    "_ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of the ingestion run (one timestamp per run, stamped on every row)."
+    },
+    "_source_file": {
+      "type": "string",
+      "description": "Relative path of the source seed/file or connector-job URI."
+    },
+    "_mapping_version": {
+      "type": "string",
+      "description": "Semver of the mapping artifact used (e.g. 'google_sheets.contact@0.1.0')."
+    },
+    "_row_hash": {
+      "type": "string",
+      "description": "SHA-256 hex of the canonicalized mapped row (see schema guide \u00a77.1)."
+    }
   }
 }
