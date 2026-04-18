@@ -86,3 +86,7 @@ dmypy.json
 .AppleDouble
 .LSOverride
 Thumbs.db
+
+# Phase 1 mapper artifacts (bucket mirror) — regeneratable, not source of truth.
+output/
+.goldens_tmp/
