@@ -1,11 +1,11 @@
-# `samples/midlayer-csv/` — worked example of the mid-layer bucket
+# `seeds/samples/midlayer-csv/` — worked example of the mid-layer bucket
 
 This directory is a **concrete, populated example** of what Phase 1's mapper emits
 into the `midlayer-csv` bucket (Supabase Storage in production; local mirror in
 dev). It exists to make the two authoritative docs real:
 
-- **Schema:** `docs/0003-midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
-- **CSV contract:** `docs/midlayer-csv-spec.md` (folder layout, file naming, sidecars, validation)
+- **Schema:** `midlayer-schema-guide/midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
+- **CSV contract:** `midlayer-schema-guide/midlayer-csv-spec.md` (folder layout, file naming, sidecars, validation)
 
 ## What's here
 
@@ -41,11 +41,12 @@ samples/midlayer-csv/
 
 ## What to notice
 
-1. **Header order** matches `schemas.midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS`
+1. **Header order** matches `midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS`
    exactly — never reorder.
 2. **Metadata columns populated on every row.** `_ingested_at` is one timestamp
-   per run (not per row). `_row_hash` is SHA-256 hex of the canonicalized
-   non-metadata row and is the primary delta-dedupe key.
+   per run (stamped on every row, not per-row). `_row_hash` is SHA-256 hex of the
+   canonicalized mapped row (see schema guide §7.1 for the exact recipe) and is
+   the primary delta-dedupe key.
 3. **Money in major units, decimal string** (`1250.0000`, not `125000` cents).
    Stripe cents are divided by 100 at the mapper boundary.
 4. **Timestamps ISO 8601 UTC with `Z`.** Stripe Unix timestamps are converted.

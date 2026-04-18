@@ -2,6 +2,11 @@
 
 **Status:** authoritative for Phase 1 mapper output and the Phase 3 loader contract.
 
+**Companion docs (read together):**
+- `midlayer-schema-guide/midlayer-schema-guide.md` — row semantics, types, enums, merge.dev alignment.
+- `midlayer-schema-guide/midlayer/v1/*.schema.json` — machine-checkable field contract.
+- `seeds/samples/midlayer-csv/` — worked example of everything on this page.
+
 ## 1. Bucket & paths
 
 - **Bucket:** `midlayer-csv` (Supabase Storage in production; a local mirror under
@@ -38,25 +43,28 @@ midlayer-csv/
 | Delimiter | `,` (ASCII 0x2C) — no regional variants |
 | Quoting | `csv.QUOTE_MINIMAL` (RFC 4180), double-quote as escape |
 | Line terminator | `\n` (LF) — never CRLF |
-| Header | Always present, `snake_case`, exact order of the mid-layer Pydantic model |
+| Header | Always present, `snake_case`, exact order of `schemas.midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS` |
 | Null | Empty string — never `NULL`, `NaN`, or `None` |
 | Booleans | Lowercase `true` / `false` |
-| Money | Plain decimal string, 4 decimal places, no symbols/commas (`1250.0000`) |
-| Timestamps | ISO 8601 UTC with `Z` suffix (`2024-04-01T00:00:00Z`) |
-| JSON cells | `_unmapped`, `addresses`, `email_addresses`, `phone_numbers` — minified JSON with keys alphabetically sorted |
+| Money | Plain decimal string, **exactly 4 decimal places**, no symbols/commas (`1250.0000`). Unknown → empty string. |
+| Exchange rate | Plain decimal string, unitless ratio; precision preserved from source. Not subject to the 4-decimal rule. |
+| Timestamps | ISO 8601 UTC with `Z` suffix (`2024-04-01T00:00:00Z`). Unknown → empty string. |
+| JSON cells | `_unmapped`, `addresses`, `email_addresses`, `phone_numbers` — minified JSON with keys alphabetically sorted. Absent sub-fields are omitted (not `null`). |
 
-## 3. Required metadata columns (every row, every table)
+## 3. Metadata columns (every row, every table)
 
-| Column | Meaning |
-| :--- | :--- |
-| `_source_system` | Slug of source system (`stripe`, `google_sheets`, …) |
-| `_source_record_id` | Raw source row id before normalization |
-| `_company_id` | Internal tenant id |
-| `_ingested_at` | ISO 8601 UTC timestamp of the ingestion run |
-| `_source_file` | Repo-relative path of the source file for this row |
-| `_mapping_version` | Semver of the mapping artifact (e.g. `stripe.invoice@0.1.0`) |
-| `_row_hash` | SHA-256 hex of the canonicalized, non-metadata row (drives delta dedupe) |
-| `_unmapped` | Minified JSON of source columns the mapper couldn't map (empty `{}` if none) |
+All eight columns below are **always emitted** (the writer never omits a column). The "Required non-null" column distinguishes which cells may be empty.
+
+| Column | Required non-null | Meaning |
+| :--- | :---: | :--- |
+| `_source_system` | ✔ | Slug of source system (`stripe`, `google_sheets`, …) |
+| `_source_record_id` | ✔ | Raw source row id before normalization |
+| `_company_id` | ✔ | Internal tenant id |
+| `_ingested_at` | ✔ | ISO 8601 UTC timestamp of the ingestion run (stamped once per run) |
+| `_source_file` | ✔ | Repo-relative path (or connector-job URI) of the source for this row |
+| `_mapping_version` | ✔ | Semver of the mapping artifact (e.g. `stripe.invoice@0.1.0`) |
+| `_row_hash` | ✔ | SHA-256 hex of the canonicalized mapped row — see schema guide §7.1 |
+| `_unmapped` | — | Minified JSON of source columns the mapper couldn't map. `{}` or empty string when none. Cell is nullable; the column is always present. |
 
 ## 4. Sidecar `.meta.json`
 
@@ -85,9 +93,11 @@ Emitted **only after all validation passes**. This is the signal Phase 3 listens
 
 ```json
 {
+  "schema_version": "v1",
   "run_date": "2024-04-01",
   "run_id": "01HVA...",
   "company_id": "acme-co",
+  "generated_at": "2024-04-01T00:00:25Z",
   "runs": [
     {
       "table": "invoices",
@@ -96,9 +106,17 @@ Emitted **only after all validation passes**. This is the signal Phase 3 listens
       "sha256": "...",
       "row_count": 3,
       "reject_count": 0,
+      "source_system": "stripe",
       "mapping_version": "stripe.invoice@0.1.0"
     }
-  ]
+  ],
+  "validation": {
+    "pydantic_validation_passed": true,
+    "row_count_parity": true,
+    "non_null_required_fields": true,
+    "currency_amount_consistency": true,
+    "primary_key_unique": true
+  }
 }
 ```
 

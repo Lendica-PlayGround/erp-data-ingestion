@@ -20,18 +20,19 @@ Two distinct merge.dev models share the label "Contact", so we disambiguate:
 
 ## 2. Sources of truth
 
-The **JSON Schemas are the contract**. Pydantic models and this markdown must track them.
+The **JSON Schemas are the contract**. Pydantic models and this markdown must track them. See §9 for precedence when the three disagree.
 
 ```
-schemas/midlayer/v1/
-  invoice.schema.json    ← confirmed canonical path (Accounting Invoice)
-  customer.schema.json   ← confirmed canonical path (Accounting Contact)
-  contact.schema.json    ← confirmed canonical path (CRM Contact)
+midlayer-schema-guide/midlayer/v1/
+  invoice.schema.json    ← canonical path (Accounting Invoice)
+  customer.schema.json   ← canonical path (Accounting Contact)
+  contact.schema.json    ← canonical path (CRM Contact)
   models.py              ← Pydantic v2 mirrors + canonical column order
 ```
 
 - **Schema draft:** JSON Schema 2020-12, `additionalProperties: false`.
-- **Required on every row (all tables):** `external_id`, and the metadata block (`_source_system`, `_source_record_id`, `_company_id`, `_ingested_at`, `_source_file`, `_mapping_version`, `_row_hash`).
+- **Required non-null on every row (all tables):** `external_id`, and the 7 metadata fields — `_source_system`, `_source_record_id`, `_company_id`, `_ingested_at`, `_source_file`, `_mapping_version`, `_row_hash`.
+- **Always-present columns (header order), not required to be non-null:** `_unmapped` (may be empty string / `{}` / a minified JSON object), `remote_was_deleted` (defaults to `false`), and every nullable public field for that table.
 - **Field order** in the CSV header is defined by `models.INVOICE_COLUMNS` / `CUSTOMER_COLUMNS` / `CONTACT_COLUMNS`. Never reorder at the writer.
 
 ## 3. Cross-cutting rules (apply to all three tables)
@@ -40,12 +41,13 @@ schemas/midlayer/v1/
 | :--- | :--- | :--- |
 | Primary key | `external_id` = source-provided stable id, **prefix preserved** (e.g. `in_1Abc…`, `cus_Abc…`). Composite uniqueness: `(_source_system, _source_record_id, _company_id)`. | Round-trip to source; merge-safe across tenants. |
 | Timestamps | ISO 8601 **UTC with `Z`**, no offsets, no naive datetimes. Unknown → empty string (CSV) / `null` (JSON). | Single timezone convention per merge.dev. |
-| Money | Decimal **string** in **major units** (dollars, not cents). 4 decimal places recommended. Never `float`. | Avoids Stripe cents bug; preserves precision in CSV. |
+| Money | Decimal **string** in **major units** (dollars, not cents). **Exactly 4 decimal places** (`1250.0000`). Never `float`. Unknown → empty string (CSV) / `null` (JSON). | Avoids Stripe cents bug; preserves precision in CSV; deterministic across mappers. |
+| Exchange rate | Decimal **string**, unitless ratio (not "major units"). Precision not fixed; mapper preserves source precision. | `exchange_rate` is a multiplier, not money. |
 | Currency | ISO-4217, uppercase 3-letter (`USD`, `EUR`). Enforced by regex `^[A-Z]{3}$`. | Matches merge.dev. |
 | Enums | Exact merge.dev values, UPPER_SNAKE_CASE. Unknown source values → row reject (not silent `null`). | Prevents status drift. |
 | Booleans | `true` / `false` lowercase in CSV; real `bool` in JSON. | RFC 4180-safe. |
-| Nullable arrays | Serialized as **minified JSON strings** in CSV cells (`addresses`, `email_addresses`, `phone_numbers`). Keys alphabetically sorted. | Keeps the mid-layer flat-CSV while round-tripping merge.dev nested objects. |
-| Unmapped source columns | Stuffed into `_unmapped` as a minified JSON object (`{}` when empty). **Never dropped.** | PRD §3 "no data loss". |
+| Nullable arrays | Serialized as **minified JSON strings** in CSV cells (`addresses`, `email_addresses`, `phone_numbers`). Keys alphabetically sorted; absent sub-fields are omitted, never `null`. | Keeps the mid-layer flat-CSV while round-tripping merge.dev nested objects. |
+| Unmapped source columns | Preserved in `_unmapped` as a minified JSON object with alphabetically sorted keys. Use `{}` or empty string when there is nothing to preserve — both are legal. **Goal: no source data loss** (PRD §3). | `_unmapped` is nullable; the column is always present in the header. |
 | `remote_was_deleted` | `false` default. `true` means the source tombstoned the record; the row is still emitted so deletes propagate. | Append-only delta semantics. |
 
 ---
@@ -197,8 +199,25 @@ Enums used inside these cells (`email_address_type`, `phone_number_type`, `addre
 | `_ingested_at` | datetime | `2026-04-18T08:00:00Z` | ISO 8601 UTC; stamped once per run. |
 | `_source_file` | string | `seeds/stripe/acme-co/invoices/sample_1.csv` | Repo-relative path (or connector-job URI). |
 | `_mapping_version` | string | `stripe.invoice@0.1.0` | Semver of the mapping artifact used. |
-| `_row_hash` | string | `a1b2…` (SHA-256 hex, 64 chars) | SHA-256 of the canonicalized non-metadata row; drives delta dedupe. |
-| `_unmapped` | JSON string | `{"description":"EU billing"}` | Source columns the mapper could not map; `{}` when none. |
+| `_row_hash` | string | `a1b2…` (SHA-256 hex, 64 chars, lowercase) | SHA-256 of the canonicalized row (see §7.1); drives delta dedupe. |
+| `_unmapped` | JSON string (nullable) | `{"description":"EU billing"}` | Source columns the mapper could not map; `{}` or empty string when none. |
+
+### 7.1 `_row_hash` canonicalization (exact recipe)
+
+Every mapper MUST compute `_row_hash` the same way, or delta dedupe breaks. Given a row's **mapped public fields** (everything between `external_id` and `remote_was_deleted` inclusive, per the table's column list), build a canonical representation:
+
+1. **Scope:** mapped public fields only. **Exclude** `_unmapped` and all metadata (`_source_*`, `_company_id`, `_ingested_at`, `_mapping_version`, `_row_hash`). This keeps the hash stable against mapping-artifact bumps and against preserved-but-unmodeled source columns.
+2. **Build a dict** keyed by mid-layer column name. Values:
+   - `null` / unknown → omit the key entirely (do **not** emit `"field": null`).
+   - String → the exact CSV cell string (after any trim/normalization the mapper performs).
+   - Decimal → the same 4-decimal string used in the CSV (`"1250.0000"`).
+   - Datetime → ISO 8601 UTC `Z` string.
+   - Boolean → JSON `true` / `false`.
+   - JSON-array columns (`addresses`, `email_addresses`, `phone_numbers`) → parse the minified JSON; include as the parsed array with keys alphabetically sorted inside each object.
+3. **Serialize** via `json.dumps(d, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`.
+4. **Hash:** `sha256(serialized.encode("utf-8")).hexdigest()` — 64 lowercase hex chars.
+
+Two rows with the same mapped content produce the same `_row_hash` regardless of source system, ingestion time, or unmapped columns.
 
 ## 8. Versioning & change control
 
@@ -214,20 +233,27 @@ Enums used inside these cells (`email_address_type`, `phone_number_type`, `addre
  (Stripe CSV,                     │ (this schema guide)      │         │
   Google Sheets, …)               └──────────────────────────┘         │
                                                                         ▼
-                                                       docs/midlayer-csv-spec.md
-                                                       (how the CSV lands on disk)
+                                              midlayer-schema-guide/midlayer-csv-spec.md
+                                              (how the CSV lands on disk)
 ```
 
-- **This document** defines *what* a mid-layer row is.
-- **`docs/midlayer-csv-spec.md`** defines *how* those rows are written to disk (folder layout, file naming, sidecar JSON, validation gate).
-- **`samples/midlayer-csv/`** shows *concrete examples* of both, for all three tables.
+- **This document (`midlayer-schema-guide/midlayer-schema-guide.md`)** defines *what* a mid-layer row is (semantics, types, enums, merge.dev alignment).
+- **`midlayer-schema-guide/midlayer-csv-spec.md`** defines *how* those rows are written to disk (folder layout, file naming, sidecar JSON, validation gate).
+- **`seeds/samples/midlayer-csv/`** shows *concrete examples* of both, for all three tables.
+
+### Precedence when these disagree
+
+1. The JSON Schemas (`midlayer-schema-guide/midlayer/v1/*.schema.json`) are the machine-checkable contract for **which fields exist, their types, nullability, and enum values**.
+2. This guide is authoritative for **semantics, formatting conventions, and merge.dev alignment** (e.g. money in major units with 4 decimal places, ISO 8601 UTC with `Z`, alphabetical key ordering in JSON cells). Where a convention is not expressible in JSON Schema, this guide wins and the mapper must enforce it.
+3. `midlayer-csv-spec.md` is authoritative for **on-disk concerns**: bucket layout, file naming, sidecar JSON, validation gate, initial-vs-delta semantics.
+4. `schemas.midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS` is authoritative for **CSV header order**. Markdown tables in this guide are illustrative; if they drift, trust the Python list.
 
 ## 10. Confirmation checklist
 
-- [x] `schemas/midlayer/v1/invoice.schema.json` exists and is aligned with merge.dev Accounting Invoice.
-- [x] `schemas/midlayer/v1/customer.schema.json` exists and is aligned with merge.dev Accounting Contact.
-- [x] `schemas/midlayer/v1/contact.schema.json` exists and is aligned with merge.dev CRM Contact.
+- [x] `midlayer-schema-guide/midlayer/v1/invoice.schema.json` exists and is aligned with merge.dev Accounting Invoice.
+- [x] `midlayer-schema-guide/midlayer/v1/customer.schema.json` exists and is aligned with merge.dev Accounting Contact.
+- [x] `midlayer-schema-guide/midlayer/v1/contact.schema.json` exists and is aligned with merge.dev CRM Contact.
 - [x] All three schemas share the same metadata block and enforce `additionalProperties: false`.
-- [x] Pydantic models in `schemas/midlayer/v1/models.py` mirror the JSON Schemas and define canonical column order.
-- [x] CSV on-disk contract documented separately in `docs/midlayer-csv-spec.md`.
-- [x] Worked examples for all three tables committed under `samples/midlayer-csv/`.
+- [x] Pydantic models in `midlayer-schema-guide/midlayer/v1/models.py` mirror the JSON Schemas and define canonical column order.
+- [x] CSV on-disk contract documented separately in `midlayer-schema-guide/midlayer-csv-spec.md`.
+- [x] Worked examples for all three tables committed under `seeds/samples/midlayer-csv/`.
