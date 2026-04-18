@@ -1,0 +1,32 @@
+{
+  "schema_version": "v1",
+  "run_date": "2026-04-19",
+  "run_id": "01HWXK9A2Z8F3Q4B7N5M6P1R2S",
+  "company_id": "acme-co",
+  "generated_at": "2026-04-19T08:00:20Z",
+  "runs": [
+    {
+      "table": "invoices",
+      "sync_type": "delta",
+      "file": "acme-co/invoices/delta/dt=2026-04-19/acme-co_invoices_delta_20260419_01HWXK9A2Z8F3Q4B7N5M6P1R2S.csv",
+      "sha256": "3a8f2c7b0e5d9a4f1c6b8e2d5a0f7c4b9e3d1a6f8c2b5e0d7a4f1c9b6e3d0a5f",
+      "row_count": 1,
+      "reject_count": 0,
+      "source_system": "stripe",
+      "mapping_version": "stripe.invoice@0.1.0"
+    }
+  ],
+  "validation": {
+    "pydantic_validation_passed": true,
+    "row_count_parity": true,
+    "non_null_required_fields": true,
+    "currency_amount_consistency": true,
+    "primary_key_unique": true,
+    "row_hash_dedupe": {
+      "deduped_against": [
+        "acme-co/invoices/initial/acme-co_invoices_initial_20260418.csv"
+      ],
+      "rows_dropped_as_duplicates": 0
+    }
+  }
+}

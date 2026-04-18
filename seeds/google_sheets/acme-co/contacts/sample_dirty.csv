@@ -1,6 +1,0 @@
-Master Contacts (edit with care!!),,,,,,,,
-,,,,,,,,
-First Name,Last Name,Company,Email,Phone,Address,Last Touch,Created,Notes
-Dana,,Umbrella Corp,dana@umbrella.example,4155550123,"",2026-04-10,2024-04-01,Missing last name
-,Müller,Café Société,,+49 30 1234567,"Unter den Linden 1, Berlin",2026-04-12,2024-04-02,Non-ASCII + no email
-Eve,Anderson,Stark Industries,eve@stark.example,"(212) 555-0143","10880 Malibu Point, 90265",not-a-date,2024-04-03,Bad date format

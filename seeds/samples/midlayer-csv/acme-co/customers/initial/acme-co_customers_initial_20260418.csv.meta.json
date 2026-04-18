@@ -1,0 +1,14 @@
+{
+  "schema_version": "v1",
+  "table": "customers",
+  "company_id": "acme-co",
+  "source_system": "stripe",
+  "sync_type": "initial",
+  "run_id": "01HWX8Z6AJK4X7QY1V0F2B3M5C",
+  "source_run_id": "airflow:stripe_customers_initial__2026-04-18",
+  "mapping_version": "stripe.customer@0.1.0",
+  "generated_at": "2026-04-18T08:00:12Z",
+  "row_count": 3,
+  "reject_count": 0,
+  "sha256": "4c1e8b2d9a7f3c6b5e0d8a2f1c9b4e7d6a3c0f2b8e5d1a9c7f4b3e6d0a8c5f2b"
+}

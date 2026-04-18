@@ -1,4 +1,0 @@
-id,name,email,description,currency,delinquent,created,phone
-cus_Abc001,Alice Smith,alice@acme.example,Primary account,usd,false,1704067200,+14155550101
-cus_Abc002,Bob O'Hara,bob@acme.example,,usd,false,1706745600,
-cus_Abc003,Charlie Doe,charlie@acme.example,VIP,eur,true,1709251200,+33123456789

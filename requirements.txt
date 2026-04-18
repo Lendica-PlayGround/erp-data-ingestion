@@ -1,0 +1,10 @@
+# Runtime
+pydantic[email]>=2.6,<3
+PyYAML>=6.0,<7
+
+# Google Sheets generator (tools/generators/gsheets_invoice_feeder.py)
+gspread>=6.1,<7
+google-auth>=2.29,<3
+
+# Dev / test
+pytest>=8.0,<9
