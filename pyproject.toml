@@ -33,7 +33,8 @@ where = ["mira"]
 include = ["agent*", "framework*", "midlayer*"]
 
 [tool.pytest.ini_options]
-testpaths = ["mira/tests"]
+pythonpath = ["src", "mira"]
+testpaths = ["mira/tests", "tests"]
 
 [tool.ruff]
 line-length = 100
