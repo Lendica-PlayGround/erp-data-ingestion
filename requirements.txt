@@ -1,6 +1,12 @@
 # Runtime
+Django>=5.0,<6
+psycopg[binary]>=3.1,<4
+python-dotenv>=1.0,<2
 pydantic[email]>=2.6,<3
 PyYAML>=6.0,<7
+boto3>=1.34,<2
+clickhouse-connect>=0.7,<1
+pyarrow>=16,<22
 
 # Google Sheets generator (tools/generators/gsheets_invoice_feeder.py)
 gspread>=6.1,<7
