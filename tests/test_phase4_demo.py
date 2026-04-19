@@ -22,7 +22,9 @@ def _load_phase4_demo_runner():
     try:
         from erp_data_ingestion.phase4_demo import Phase4DemoRequest, Phase4DemoRunner
     except ModuleNotFoundError as exc:
-        pytest.fail(f"phase4_demo module missing: {exc.name}")
+        if exc.name == "erp_data_ingestion.phase4_demo":
+            pytest.fail(f"phase4_demo module missing: {exc.name}")
+        raise
     return Phase4DemoRequest, Phase4DemoRunner
 
 
