@@ -1,0 +1,73 @@
+{
+  "table": "customers",
+  "columns": [
+    {
+      "name": "id",
+      "datatype": "string",
+      "domain": {
+        "kind": "regex",
+        "pattern": "^cus_[a-zA-Z0-9]+$",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Unique identifier for the customer."
+    },
+    {
+      "name": "email",
+      "datatype": "string",
+      "domain": {
+        "kind": "regex",
+        "pattern": "^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Email address of the customer."
+    },
+    {
+      "name": "created",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "range",
+        "min": null,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp when the customer was created."
+    },
+    {
+      "name": "balance",
+      "datatype": "integer",
+      "domain": {
+        "kind": "range",
+        "min": null,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "currency",
+        "code": "USD"
+      },
+      "description": "Current balance of the customer."
+    },
+    {
+      "name": "default_source",
+      "datatype": "string",
+      "domain": {
+        "kind": "regex",
+        "pattern": "^src_[a-zA-Z0-9]+$",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "ID of the default payment source for the customer."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "table": "invoices",
+  "columns": [
+    {
+      "name": "id",
+      "datatype": "string",
+      "domain": {
+        "kind": "regex",
+        "pattern": "^in_[a-zA-Z0-9]+$",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Unique identifier for the invoice."
+    },
+    {
+      "name": "customer_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "regex",
+        "pattern": "^cus_[a-zA-Z0-9]+$",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Identifier of the customer associated with the invoice."
+    },
+    {
+      "name": "amount_due",
+      "datatype": "integer",
+      "domain": {
+        "kind": "range",
+        "min": 0,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "currency",
+        "code": "USD"
+      },
+      "description": "Total amount due on the invoice."
+    },
+    {
+      "name": "status",
+      "datatype": "string",
+      "domain": {
+        "kind": "categories",
+        "values": ["draft", "open", "paid", "uncollectible", "void"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Current status of the invoice."
+    },
+    {
+      "name": "created",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "range",
+        "min": null,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp when the invoice was created."
+    }
+  ]
+}
