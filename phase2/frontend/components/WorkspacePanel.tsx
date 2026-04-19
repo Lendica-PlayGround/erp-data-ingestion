@@ -187,9 +187,9 @@ export function WorkspacePanel({
         if (r.steps.length === 0 && r.skipped.length > 0) {
           const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
           alert(
-            `No input CSV was found for any table.\n\n` +
-                `Add CSV/TSV/txt under uploads for this session (name files like contacts.csv / customers.csv), ` +
-              `or remove uploads to use repo samples under phase2/output/tables/<phase2_table>/.\n\n` +
+            `No input was found for any table.\n\n` +
+              `Upload CSVs (e.g. customers.csv) or an .xlsx whose sheet names match each table ` +
+              `(customers, invoices, …), or remove uploads to use repo samples under phase2/output/tables/.\n\n` +
               `Skipped:\n${lines}`,
           );
         } else {
@@ -199,7 +199,7 @@ export function WorkspacePanel({
         }
       } else if (r.skipped.length > 0) {
         const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
-        alert(`Preview written for ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
+        alert(`Mapped ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
       }
     } catch (e) {
       alert("Apply mapper failed: " + (e as Error).message);
@@ -274,7 +274,7 @@ export function WorkspacePanel({
                 type="button"
                 onClick={() => void runApplyMapper()}
                 disabled={applyBusy}
-                title="Runs the generated Python mapper on your session CSV uploads (matched by table name). If you have no uploads, uses sample CSVs under phase2/output/tables/. Output: phase2.5/output/mapped/"
+                title="Runs the generated mapper on session uploads: CSV/TSV by file name, or Excel (.xlsx) by worksheet name (e.g. tabs «customers», «invoices»). If there are no uploads, uses sample CSVs under phase2/output/tables/. Output: phase2.5/output/mapped/"
                 className="inline-flex items-center gap-1.5 rounded-md bg-ink-700 px-3 py-1.5 text-xs font-medium text-ink-50 hover:bg-ink-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {applyBusy ? (
@@ -283,11 +283,12 @@ export function WorkspacePanel({
                 {applyBusy ? "Running mapper…" : "Run mapper on uploads"}
               </button>
               <span className="text-[11px] leading-snug text-ink-500">
-                Executes <span className="font-mono text-ink-400">handshake_run_mapper.py</span> on your
-                CSVs and writes mid-layer CSVs under{" "}
-                <span className="font-mono text-ink-400">phase2.5/output/mapped/</span>. Name uploads like{" "}
-                <span className="font-mono">contacts.csv</span> / <span className="font-mono">customers.csv</span>{" "}
-                so they match each table (header: Run handshake only builds the mapper; this button runs it).
+                Runs <span className="font-mono text-ink-400">handshake_run_mapper.py</span> on your data and
+                writes mid-layer CSVs under{" "}
+                <span className="font-mono text-ink-400">phase2.5/output/mapped/</span>. Use{" "}
+                <span className="font-mono">customers.csv</span> or an Excel tab named{" "}
+                <span className="font-mono">customers</span> / <span className="font-mono">invoices</span> (sheet
+                names are matched to each table). Run handshake only generates the mapper; this button executes it.
               </span>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(180px,280px)_1fr]">
