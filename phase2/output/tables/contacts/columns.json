@@ -1,23 +1,23 @@
 {
   "table": "contacts",
   "columns": [
-    {"name": "customer", "datatype": "integer", "domain": {"kind": "range", "min": 10000, "max": null, "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Identifier for the customer associated with the contact."},
+    {"name": "customer", "datatype": "integer", "domain": {"kind": "range", "min": 10000, "max": null, "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Identifier linking the contact to a customer."},
     {"name": "id", "datatype": "integer", "domain": {"kind": "range", "min": 20000, "max": null, "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Unique identifier for each contact."},
     {"name": "object", "datatype": "string", "domain": {"kind": "categories", "values": ["contact"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Type of object, always 'contact'."},
-    {"name": "name", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Name of the contact."},
-    {"name": "title", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Title or position of the contact within the company."},
-    {"name": "email", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Email address of the contact."},
-    {"name": "phone", "datatype": "string", "domain": {"kind": "regex", "pattern": "^\+1-[0-9]{3}-[0-9]{3}-[0-9]{4}$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Phone number of the contact."},
-    {"name": "primary", "datatype": "boolean", "domain": {"kind": "categories", "values": [true, false], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates if this contact is the primary contact for the customer."},
-    {"name": "sms_enabled", "datatype": "boolean", "domain": {"kind": "categories", "values": [true, false], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates if SMS communication is enabled for this contact."},
-    {"name": "department", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Department within the company that the contact belongs to."},
+    {"name": "name", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Name of the contact person."},
+    {"name": "title", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Job title of the contact person."},
+    {"name": "email", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[\w\.-]+@[\w\.-]+\.\w+$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Email address of the contact person."},
+    {"name": "phone", "datatype": "string", "domain": {"kind": "regex", "pattern": "^\+1-[0-9]{3}-[0-9]{3}-[0-9]{4}$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Phone number of the contact person."},
+    {"name": "primary", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates if this is the primary contact for the customer."},
+    {"name": "sms_enabled", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates if SMS communication is enabled for this contact."},
+    {"name": "department", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Department to which the contact belongs."},
     {"name": "address1", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Primary address line of the contact."},
-    {"name": "address2", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Secondary address line of the contact, if any."},
+    {"name": "address2", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Secondary address line of the contact."},
     {"name": "city", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "City of the contact's address."},
     {"name": "state", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "State of the contact's address."},
-    {"name": "postal_code", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[0-9]{5}(?:-[0-9]{4})?$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Postal code of the contact's address."},
+    {"name": "postal_code", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[0-9]{5}$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Postal code of the contact's address."},
     {"name": "country", "datatype": "string", "domain": {"kind": "categories", "values": ["US", "CA", "MX"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Country code of the contact's address."},
     {"name": "created_at", "datatype": "datetime", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Timestamp when the contact was created."},
-    {"name": "updated_at", "datatype": "datetime", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Timestamp when the contact information was last updated."}
+    {"name": "updated_at", "datatype": "datetime", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Timestamp when the contact was last updated."}
   ]
 }
