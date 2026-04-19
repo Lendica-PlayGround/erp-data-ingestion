@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body {
+  @apply bg-ink-900 text-ink-100 antialiased;
+}
+
+/* Subtle scrollbar */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #2a2f3a;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #39404e;
+}
+
+/* Flash highlight on freshly-changed files. */
+@keyframes flash {
+  0% {
+    background-color: rgba(99, 102, 241, 0.35);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.flash-new {
+  animation: flash 8s ease-out;
+}
+
+.prose-agent h1 {
+  @apply text-xl font-semibold mb-2 mt-0 text-ink-50;
+}
+.prose-agent h2 {
+  @apply text-base font-semibold mt-4 mb-1 text-ink-100;
+}
+.prose-agent h3 {
+  @apply text-sm font-semibold mt-3 mb-1 text-ink-200;
+}
+.prose-agent p {
+  @apply my-2 leading-relaxed text-ink-100;
+}
+.prose-agent ul {
+  @apply list-disc ml-5 my-2;
+}
+.prose-agent ol {
+  @apply list-decimal ml-5 my-2;
+}
+.prose-agent li {
+  @apply my-0.5;
+}
+.prose-agent code {
+  @apply bg-ink-700 text-ink-50 rounded px-1 py-0.5 text-[0.85em] font-mono;
+}
+.prose-agent pre {
+  @apply bg-ink-800 border border-ink-700 rounded-lg p-3 overflow-x-auto my-3 text-[0.85em] font-mono;
+}
+.prose-agent pre code {
+  @apply bg-transparent p-0;
+}
+.prose-agent a {
+  @apply text-brand-soft underline;
+}
+.prose-agent table {
+  @apply w-full my-3 text-sm;
+}
+.prose-agent th,
+.prose-agent td {
+  @apply border border-ink-700 px-2 py-1 text-left;
+}

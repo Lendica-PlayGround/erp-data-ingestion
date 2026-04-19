@@ -15,6 +15,7 @@ The current repository includes:
 The current project specs live in:
 - [`docs/0001-prd.md`](./docs/0001-prd.md)
 - [`docs/0002-phase1-midlayer-csv-contract.md`](./docs/0002-phase1-midlayer-csv-contract.md)
+- [`docs/specs/2026-04-18-phase2-exploration-chatbot.md`](./docs/specs/2026-04-18-phase2-exploration-chatbot.md)
 - [`docs/discussion/initial-discussion.md`](./docs/discussion/initial-discussion.md)
 
 For now, these documents are the source of truth for product direction and phase-one scope.
@@ -26,9 +27,17 @@ Feature and design specs going forward should be added under [`docs/specs/`](./d
 ```text
 apps/      Application code and Django project scaffolding
 docs/      Product requirements, phase specs, and discussion notes
+phase2/    Exploration Chatbot (FastAPI + Next.js)
 schemas/   Mid-layer schema definitions
 seeds/     Example source data and manifests
 ```
+
+## Phase 2: Exploration Chatbot
+
+A ChatGPT-style agent that explores unfamiliar datasets / APIs / docs and
+produces structured table descriptions + column info, auto-committed to
+`phase2/output/`. See [`phase2/README.md`](./phase2/README.md) for setup
+(`make -C phase2 install && make -C phase2 dev`).
 
 ## Documentation And Process
 
