@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
+from ..file_preview import content_payload
 from ..settings import get_settings
 
 router = APIRouter()
@@ -122,17 +123,4 @@ async def read_upload_content(session_id: str, path: str = Query(..., min_length
         raise HTTPException(400, "path escapes session dir") from exc
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "not found")
-    data = target.read_bytes()
-    try:
-        text = data.decode("utf-8")
-        binary = False
-    except UnicodeDecodeError:
-        text = ""
-        binary = True
-    return {
-        "path": path,
-        "size": len(data),
-        "mtime": target.stat().st_mtime,
-        "binary": binary,
-        "content": text,
-    }
+    return content_payload(path, target)

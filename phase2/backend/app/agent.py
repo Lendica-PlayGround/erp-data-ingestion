@@ -26,6 +26,9 @@ from .tools import ToolContext, ToolError, build_tool_specs, dispatch
 log = logging.getLogger(__name__)
 
 MAX_TOOL_ITERATIONS = 12
+# OpenAI TPM limits: tool results in history must stay small (full result was sent verbatim).
+# Cap per tool result in chat history (multi-sheet Excel previews need more room than text files).
+MAX_TOOL_RESULT_MESSAGE_CHARS = 20_000
 
 SYSTEM_PROMPT = """\
 You are the Phase 2 Exploration Agent for an agentic ERP data ingestion
@@ -99,6 +102,8 @@ you have described so far, newest first, each linking to its
 
 ## Operating rules
 
+- For **Excel** uploads (`.xlsx` / `.xlsm`), use **`preview_excel`** only. Never call
+  `read_file` on spreadsheets — they are binary and will exceed model limits.
 - After writing artifacts for a table, call `git_commit` with a short
   message like `describe invoices table`. The commit is scoped to
   `phase2/output/` automatically.
@@ -135,8 +140,11 @@ def build_messages(
     if session_uploads:
         listing = "\n".join(f"- uploads/{p}" for p in session_uploads)
         uploads_note = (
-            "\n\nFiles the user has uploaded this session (readable via "
-            "`read_file`, `preview_csv`, `preview_json`):\n" + listing
+            "\n\nFiles the user has uploaded this session:\n"
+            "- Text / CSV / JSON: `read_file`, `preview_csv`, or `preview_json`.\n"
+            "- Excel (`.xlsx`/`.xlsm`): use **`preview_excel` only** — do not use "
+            "`read_file` on spreadsheets (binary; too large for the model).\n"
+            + listing
         )
     return [
         {"role": "system", "content": SYSTEM_PROMPT + uploads_note},
@@ -257,7 +265,7 @@ async def run_agent(
                     "role": "tool",
                     "tool_call_id": tc["id"],
                     "name": name,
-                    "content": result,
+                    "content": _truncate_for_model(result, MAX_TOOL_RESULT_MESSAGE_CHARS),
                 }
             )
 
@@ -291,3 +299,10 @@ def _truncate(text: str, limit: int) -> str:
     if len(text) <= limit:
         return text
     return text[:limit] + f"... [truncated {len(text) - limit} chars]"
+
+
+def _truncate_for_model(text: str, limit: int) -> str:
+    """Cap tool output stored in chat history so the next API request stays under TPM."""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"\n... [truncated {len(text) - limit} chars for API size]"

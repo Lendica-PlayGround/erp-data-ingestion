@@ -125,6 +125,11 @@ def tool_read_file(ctx: ToolContext, path: str, max_bytes: int = MAX_BYTES) -> s
     target = _resolve_safe(path, ctx.session_id)
     if not target.exists() or not target.is_file():
         raise ToolError(f"file not found: {path}")
+    if target.suffix.lower() in (".xlsx", ".xlsm"):
+        raise ToolError(
+            "Excel workbooks are binary and too large to read as text. "
+            "Call preview_excel with the same path for a capped row sample per sheet."
+        )
     data = target.read_bytes()[:max_bytes]
     try:
         text = data.decode("utf-8")
@@ -178,6 +183,91 @@ def tool_preview_csv(ctx: ToolContext, path: str, n: int = 20) -> str:
         "head": df.head(n).astype(object).where(df.head(n).notna(), None).to_dict("records"),
     }
     return json.dumps(summary, default=str)
+
+
+def tool_preview_excel(
+    ctx: ToolContext,
+    path: str,
+    rows: int = 50,
+    max_cols: int = 48,
+) -> str:
+    """Sample **every** worksheet: first N rows each (N is lowered until JSON fits model budget)."""
+    from openpyxl import load_workbook
+
+    target = _resolve_safe(path, ctx.session_id)
+    if not target.exists() or not target.is_file():
+        raise ToolError(f"file not found: {path}")
+    if target.suffix.lower() not in (".xlsx", ".xlsm"):
+        raise ToolError("preview_excel only supports .xlsx and .xlsm files")
+
+    want_rows = max(1, min(int(rows), 100))
+    max_cols_arg = max(8, min(int(max_cols), 80))
+    max_cell = 120
+
+    def _cell(v: object) -> str:
+        if v is None:
+            return ""
+        s = str(v).replace("\n", " ").replace("\r", "")
+        return s if len(s) <= max_cell else s[:max_cell] + "…"
+
+    def _build_payload(wb: Any, per_sheet_rows: int, cols_cap: int) -> dict[str, Any]:
+        out_sheets: list[dict[str, Any]] = []
+        for ws in wb.worksheets:
+            grid: list[list[str]] = []
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                if i >= per_sheet_rows:
+                    break
+                vals = list(row)[:cols_cap]
+                grid.append([_cell(c) for c in vals])
+            out_sheets.append(
+                {
+                    "sheet": ws.title,
+                    "rows_in_preview": len(grid),
+                    "truncated_per_sheet": len(grid) >= per_sheet_rows,
+                    "row_samples": grid,
+                }
+            )
+        return {
+            "path": path,
+            "sheet_names": list(wb.sheetnames),
+            "sheet_count": len(wb.sheetnames),
+            "note": (
+                f"All {len(wb.sheetnames)} sheet(s) sampled; up to {per_sheet_rows} row(s) each, "
+                f"{cols_cap} column(s) per row — not the full workbook."
+            ),
+            "sheets": out_sheets,
+        }
+
+    _MAX_JSON = 19_000
+    row_candidates = sorted({want_rows, 35, 25, 18, 12, 8, 5, 3, 2, 1}, reverse=True)
+    col_candidates = [max_cols_arg, 40, 32, 24, 16, 12, 8]
+
+    wb = load_workbook(filename=target, read_only=True, data_only=True)
+    try:
+        for cols_cap in col_candidates:
+            for per_sheet_rows in row_candidates:
+                payload = _build_payload(wb, per_sheet_rows, cols_cap)
+                raw = json.dumps(payload, default=str)
+                if len(raw) <= _MAX_JSON:
+                    return raw
+            payload = _build_payload(wb, 1, cols_cap)
+            raw = json.dumps(payload, default=str)
+            if len(raw) <= _MAX_JSON:
+                return raw
+        return json.dumps(
+            {
+                "path": path,
+                "sheet_names": list(wb.sheetnames),
+                "sheet_count": len(wb.sheetnames),
+                "error": (
+                    "Row samples still too large after shrinking rows/columns; "
+                    "sheet list is complete. Try CSV export or a narrower workbook."
+                ),
+            },
+            default=str,
+        )
+    finally:
+        wb.close()
 
 
 def tool_preview_json(ctx: ToolContext, path: str) -> str:
@@ -319,6 +409,7 @@ TOOL_IMPLS: dict[str, Callable[..., str]] = {
     "read_file": tool_read_file,
     "write_file": tool_write_file,
     "preview_csv": tool_preview_csv,
+    "preview_excel": tool_preview_excel,
     "preview_json": tool_preview_json,
     "fetch_url": tool_fetch_url,
     "call_api": tool_call_api,
@@ -346,7 +437,7 @@ def build_tool_specs() -> list[dict[str, Any]]:
                 "description": (
                     "Read a text file. Paths starting with 'uploads/' read the "
                     "user's uploaded files; any other relative path is rooted at "
-                    "phase2/output/."
+                    "phase2/output/. Do not use for .xlsx/.xlsm — use preview_excel."
                 ),
                 "parameters": {
                     "type": "object",
@@ -390,6 +481,26 @@ def build_tool_specs() -> list[dict[str, Any]]:
                     "properties": {
                         "path": {"type": "string"},
                         "n": {"type": "integer", "default": 20},
+                    },
+                    "required": ["path"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "preview_excel",
+                "description": (
+                    "Sample **every worksheet** in an .xlsx/.xlsm: first N rows per sheet "
+                    "(N may be lowered automatically so the result fits the model). "
+                    "Response includes full sheet_names. Never use read_file on Excel."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string"},
+                        "rows": {"type": "integer", "default": 50},
+                        "max_cols": {"type": "integer", "default": 48},
                     },
                     "required": ["path"],
                 },

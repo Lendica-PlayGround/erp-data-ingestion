@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
 import logging
 import os
-import shutil
+import re
 import subprocess
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from ..file_preview import content_payload
 from ..settings import BACKEND_DIR, Settings, get_settings
 
 log = logging.getLogger(__name__)
@@ -22,9 +25,13 @@ router = APIRouter()
 
 _REPO_ROOT = BACKEND_DIR.parent.parent
 _PHASE25 = _REPO_ROOT / "phase2.5"
+_PHASE25_OUT = _PHASE25 / "output"
 _MIDLAYER_V1 = _REPO_ROOT / "midlayer-schema-guide" / "midlayer" / "v1"
 # Source-like uploads for codegen previews (any basename; matched by suffix only).
-_SOURCE_SUFFIXES = frozenset({".csv", ".tsv", ".txt", ".json", ".jsonl"})
+_SOURCE_SUFFIXES = frozenset({".csv", ".tsv", ".txt", ".json", ".jsonl", ".xlsx", ".xlsm"})
+# Generated ``handshake_run_mapper.py`` uses csv.DictReader — only these are valid apply inputs.
+_MAPPER_INPUT_SUFFIXES = frozenset({".csv", ".tsv", ".txt"})
+_XLSX_SUFFIXES = frozenset({".xlsx", ".xlsm"})
 _MAX_LOG_CHARS = 12_000
 
 
@@ -41,6 +48,139 @@ def _session_source_files(upload_root: Path) -> list[Path]:
         if p.suffix.lower() in _SOURCE_SUFFIXES:
             out.append(p)
     return sorted(out, key=lambda x: str(x).lower())
+
+
+def _session_mapper_inputs(upload_root: Path) -> list[Path]:
+    """Session files the CSV mapper can read (excludes XLSX/JSON used only for previews)."""
+    if not upload_root.is_dir():
+        return []
+    out: list[Path] = []
+    for p in upload_root.rglob("*"):
+        if not p.is_file():
+            continue
+        if p.name.startswith("."):
+            continue
+        if p.suffix.lower() in _MAPPER_INPUT_SUFFIXES:
+            out.append(p)
+    return sorted(out, key=lambda x: str(x).lower())
+
+
+def _session_xlsx_uploads(upload_root: Path | None) -> list[Path]:
+    """``.xlsx`` / ``.xlsm`` in the session (sheet names matched to mid-layer tables)."""
+    if not upload_root or not upload_root.is_dir():
+        return []
+    out: list[Path] = []
+    for p in upload_root.rglob("*"):
+        if not p.is_file():
+            continue
+        if p.name.startswith("."):
+            continue
+        if p.suffix.lower() in _XLSX_SUFFIXES:
+            out.append(p)
+    return sorted(out, key=lambda x: str(x).lower())
+
+
+def _sheet_match_score(sheet_title: str, table: str, workbook_stem: str) -> int:
+    """Score how well an Excel worksheet name matches ``table`` (e.g. customers, invoices)."""
+    s = sheet_title.strip().lower()
+    t = table.strip().lower()
+    if not s or not t:
+        return 0
+    bonus = 3 if t in workbook_stem.strip().lower() else 0
+    if s == t:
+        return 100 + bonus
+    s_nospace = re.sub(r"\s+", "", s)
+    t_nospace = re.sub(r"\s+", "", t)
+    if s_nospace == t_nospace:
+        return 98 + bonus
+    s_ = s.replace(" ", "_").replace("-", "_")
+    t_ = t.replace(" ", "_").replace("-", "_")
+    if s_ == t_:
+        return 96 + bonus
+    # Plural / singular (invoice ↔ invoices, customer ↔ customers)
+    def _stem(w: str) -> str:
+        w = w.rstrip("_- ")
+        return w[:-1] if len(w) > 3 and w.endswith("s") else w
+
+    if _stem(s_nospace) == _stem(t_nospace):
+        return 88 + bonus
+    if len(t) >= 4 and t in s:
+        return 82 + bonus
+    if len(s) >= 4 and s in t:
+        return 78 + bonus
+    return 0
+
+
+def _xlsx_cell_csv(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value).strip()
+
+
+def _export_xlsx_sheet_to_csv(xlsx_path: Path, sheet_title: str, dest: Path) -> None:
+    from openpyxl import load_workbook
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    wb = load_workbook(xlsx_path, read_only=True, data_only=True)
+    try:
+        ws = wb[sheet_title]
+        with dest.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            for row in ws.iter_rows(values_only=True):
+                writer.writerow([_xlsx_cell_csv(c) for c in row])
+    finally:
+        wb.close()
+
+
+def _export_best_xlsx_sheet_for_table(
+    xlsx_files: list[Path],
+    table: str,
+    staging_dir: Path,
+    mid: str,
+) -> tuple[Path, str] | None:
+    """Pick the best-matching worksheet across workbooks, export to CSV, return path and label."""
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        log.warning("openpyxl is not installed; cannot use .xlsx uploads for mapper apply")
+        return None
+
+    candidates: list[tuple[int, Path, str]] = []
+    for xp in xlsx_files:
+        stem = xp.stem.lower()
+        try:
+            wb = load_workbook(xp, read_only=True, data_only=True)
+        except OSError as exc:
+            log.warning("cannot read xlsx %s: %s", xp, exc)
+            continue
+        try:
+            for sheet_title in wb.sheetnames:
+                sc = _sheet_match_score(sheet_title, table, stem)
+                if sc > 0:
+                    candidates.append((sc, xp, sheet_title))
+        finally:
+            wb.close()
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda x: (-x[0], x[1].name.lower(), x[2].lower()))
+    _score, xp, sheet_title = candidates[0]
+    safe = f"{mid}_{xp.stem}_{sheet_title}"
+    safe = re.sub(r"[^\w\-.]+", "_", safe)[:140]
+    out_csv = staging_dir / f"{safe}.csv"
+    try:
+        _export_xlsx_sheet_to_csv(xp, sheet_title, out_csv)
+    except OSError as exc:
+        log.warning("export xlsx sheet failed %s %r: %s", xp, sheet_title, exc)
+        return None
+    label = f"{xp.name} (sheet {sheet_title!r})"
+    return out_csv, label
 
 
 class HandshakeRunBody(BaseModel):
@@ -79,41 +219,39 @@ def _run_subprocess(
     )
 
 
-def _resolve_handshake_json(settings: Settings) -> Path | None:
-    """Prefer published workspace copy; fall back to phase2.5/output."""
-    p = settings.output_path / "handshake" / "handshake_mapping.json"
-    if p.is_file():
-        return p
-    alt = _PHASE25 / "output" / "handshake_mapping.json"
-    if alt.is_file():
-        return alt
-    return None
+def _resolve_handshake_json(_settings: Settings) -> Path | None:
+    """Handshake mapping JSON lives only under ``phase2.5/output/``."""
+    p = _PHASE25_OUT / "handshake_mapping.json"
+    return p if p.is_file() else None
 
 
-def _resolve_mapper_script(settings: Settings) -> Path | None:
-    p = settings.output_path / "handshake" / "handshake_run_mapper.py"
-    if p.is_file():
-        return p
-    alt = _PHASE25 / "output" / "handshake_run_mapper.py"
-    if alt.is_file():
-        return alt
-    return None
+def _resolve_mapper_script(_settings: Settings) -> Path | None:
+    """Generated mapper script lives only under ``phase2.5/output/``."""
+    p = _PHASE25_OUT / "handshake_run_mapper.py"
+    return p if p.is_file() else None
 
 
 def _pick_input_for_table(uploads: list[Path], table: str) -> Path | None:
     """Match an upload to a mid-layer table name (basename heuristics)."""
     t = table.lower()
-    for p in uploads:
-        if p.stem.lower() == t:
-            return p
+    scored: list[tuple[int, Path]] = []
     for p in uploads:
         s = p.stem.lower()
-        if s.startswith(t + "_") or s.endswith("_" + t):
-            return p
-    for p in uploads:
-        if t in p.stem.lower():
-            return p
-    return None
+        if s == t:
+            score = 100
+        elif s.startswith(f"{t}_") or s.endswith(f"_{t}"):
+            score = 85
+        elif t in s:
+            score = 70
+        elif s.startswith(t) or s.endswith(t):
+            score = 55
+        else:
+            continue
+        scored.append((score, p))
+    if not scored:
+        return None
+    scored.sort(key=lambda x: (-x[0], x[1].name.lower()))
+    return scored[0][1]
 
 
 def _phase2_table_csv(phase2_out: Path, phase2_table: str) -> Path | None:
@@ -124,25 +262,44 @@ def _phase2_table_csv(phase2_out: Path, phase2_table: str) -> Path | None:
     return csvs[0] if csvs else None
 
 
-def _publish_artifacts(
-    phase25_output: Path,
-    output_root: Path,
-    *,
-    codegen_ok: bool,
-) -> list[str]:
-    dest = output_root / "handshake"
-    dest.mkdir(parents=True, exist_ok=True)
-    out: list[str] = []
-    hj = phase25_output / "handshake_mapping.json"
-    if hj.is_file():
-        shutil.copy2(hj, dest / "handshake_mapping.json")
-        out.append("handshake/handshake_mapping.json")
-    if codegen_ok:
-        hp = phase25_output / "handshake_run_mapper.py"
-        if hp.is_file():
-            shutil.copy2(hp, dest / "handshake_run_mapper.py")
-            out.append("handshake/handshake_run_mapper.py")
-    return out
+@router.get("/handshake/artifacts")
+async def list_handshake_artifacts() -> dict:
+    """List files under ``phase2.5/output/`` (handshake JSON, mapper, mapped CSVs)."""
+    root = _PHASE25_OUT
+    if not root.is_dir():
+        return {"files": []}
+    files: list[dict] = []
+    try:
+        for p in sorted(root.rglob("*")):
+            if p.is_dir() or any(part.startswith(".") for part in p.relative_to(root).parts):
+                continue
+            stat = p.stat()
+            files.append(
+                {
+                    "path": p.relative_to(root).as_posix(),
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime,
+                }
+            )
+    except OSError as exc:
+        raise HTTPException(500, f"cannot list phase2.5 output: {exc!s}") from exc
+    return {"files": files}
+
+
+@router.get("/handshake/content")
+async def read_handshake_content(path: str = Query(..., min_length=1)) -> dict:
+    """Read a file under ``phase2.5/output/`` (relative path)."""
+    if ".." in path.split("/"):
+        raise HTTPException(400, "invalid path")
+    root = _PHASE25_OUT.resolve()
+    target = (root / path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(400, "path escapes phase2.5 output dir") from exc
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "not found")
+    return content_payload(path, target)
 
 
 @router.post("/handshake/run")
@@ -157,7 +314,7 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
     if not _PHASE25.is_dir():
         raise HTTPException(500, f"phase2.5 directory not found: {_PHASE25}")
 
-    phase25_output = _PHASE25 / "output"
+    phase25_output = _PHASE25_OUT
     phase25_output.mkdir(parents=True, exist_ok=True)
 
     env: dict[str, str] = {k: v for k, v in os.environ.items() if isinstance(v, str)}
@@ -279,11 +436,15 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
             r_gen.returncode,
             (r_gen.stderr or "")[:2000],
         )
-    artifacts = _publish_artifacts(
-        phase25_output,
-        settings.output_path,
-        codegen_ok=codegen_ok,
-    )
+
+    artifacts: list[str] = []
+    hj = phase25_output / "handshake_mapping.json"
+    if hj.is_file():
+        artifacts.append("phase2.5/output/handshake_mapping.json")
+    if codegen_ok:
+        hp = phase25_output / "handshake_run_mapper.py"
+        if hp.is_file():
+            artifacts.append("phase2.5/output/handshake_run_mapper.py")
 
     ok = codegen_ok
     return {
@@ -297,7 +458,7 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
 
 @router.post("/handshake/apply")
 async def apply_handshake(body: HandshakeApplyBody) -> dict:
-    """Run ``handshake_run_mapper.py`` for each table, writing mid-layer CSV previews under `handshake/preview/`."""
+    """Run ``handshake_run_mapper.py`` for each table; writes mid-layer CSVs under ``phase2.5/output/mapped/``."""
     settings = get_settings()
     mapper = _resolve_mapper_script(settings)
     if not mapper:
@@ -321,13 +482,19 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
     if not tables:
         raise HTTPException(400, "handshake_mapping.json has no tables.")
 
+    table_entries = [e for e in tables if (e.get("midlayer_table") or "").strip()]
+    n_mapped_tables = len(table_entries)
+
     sid = (body.session_id or "").strip()
     upload_root = (settings.upload_path / sid).resolve() if sid else None
-    uploads = _session_source_files(upload_root) if upload_root and upload_root.is_dir() else []
+    uploads_csv = _session_mapper_inputs(upload_root) if upload_root and upload_root.is_dir() else []
+    uploads_xlsx = _session_xlsx_uploads(upload_root) if upload_root and upload_root.is_dir() else []
     phase2_out = settings.output_path.resolve()
 
-    preview_dir = settings.output_path / "handshake" / "preview"
-    preview_dir.mkdir(parents=True, exist_ok=True)
+    mapped_dir = _PHASE25_OUT / "mapped"
+    mapped_dir.mkdir(parents=True, exist_ok=True)
+    xlsx_staging = mapped_dir / ".xlsx_staging" / (sid or "_")
+    xlsx_staging.mkdir(parents=True, exist_ok=True)
 
     py = sys.executable
     steps: list[dict] = []
@@ -339,21 +506,48 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
         p2 = (entry.get("phase2_table") or "").strip()
         if not mid:
             continue
-        input_path = None
-        if uploads:
-            input_path = _pick_input_for_table(uploads, mid)
-        if input_path is None and p2:
+        input_path: Path | None = None
+        from_upload = False
+        input_detail: str | None = None
+
+        if uploads_csv:
+            input_path = _pick_input_for_table(uploads_csv, mid)
+            if input_path is not None:
+                from_upload = True
+        if input_path is None and uploads_xlsx:
+            xlsx_pick = _export_best_xlsx_sheet_for_table(
+                uploads_xlsx, mid, xlsx_staging, mid
+            )
+            if xlsx_pick:
+                input_path, input_detail = xlsx_pick
+                from_upload = True
+        if input_path is None and uploads_csv and len(uploads_csv) == 1 and n_mapped_tables == 1:
+            input_path = uploads_csv[0]
+            from_upload = True
+
+        has_session_files = bool(uploads_csv or uploads_xlsx)
+        if input_path is None and not has_session_files:
             input_path = _phase2_table_csv(phase2_out, p2)
         if input_path is None:
-            skipped.append(
-                {
-                    "table": mid,
-                    "phase2_table": p2,
-                    "reason": "no CSV found (upload a file whose name matches the table, "
-                    "or place a .csv under output/tables/<phase2_table>/)",
-                }
-            )
+            if has_session_files:
+                reason = (
+                    f"no CSV matched {mid!r} and no Excel worksheet name matched it. "
+                    f"Use a sheet or file name containing «{mid}» (e.g. tab {mid}), or upload {mid}.csv."
+                )
+            else:
+                reason = (
+                    "no CSV/TSV/txt found — upload e.g. contacts.csv, or add .csv under "
+                    "phase2/output/tables/<phase2_table>/"
+                )
+            skipped.append({"table": mid, "phase2_table": p2, "reason": reason})
             continue
+
+        if from_upload and input_detail:
+            src = "session_upload_xlsx"
+        elif from_upload:
+            src = "session_upload"
+        else:
+            src = "phase2_output"
 
         argv = [
             py,
@@ -361,7 +555,7 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
             "--input",
             str(input_path),
             "--output",
-            str(preview_dir),
+            str(mapped_dir),
             "--table",
             mid,
         ]
@@ -380,21 +574,23 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
             log.exception("handshake apply subprocess failed for %s", mid)
             raise HTTPException(500, f"mapper failed to start for {mid}: {exc!s}") from exc
 
-        out_rel = f"handshake/preview/{mid}_mapped.csv"
-        out_file = preview_dir / f"{mid}_mapped.csv"
+        out_rel = f"mapped/{mid}_mapped.csv"
+        out_file = mapped_dir / f"{mid}_mapped.csv"
         ok = proc.returncode == 0 and out_file.is_file()
         if ok:
             outputs.append(out_rel)
-        steps.append(
-            {
-                "table": mid,
-                "input": str(input_path),
-                "ok": ok,
-                "returncode": proc.returncode,
-                "stdout": _truncate(proc.stdout),
-                "stderr": _truncate(proc.stderr),
-            }
-        )
+        step: dict = {
+            "table": mid,
+            "input": str(input_path),
+            "input_source": src,
+            "ok": ok,
+            "returncode": proc.returncode,
+            "stdout": _truncate(proc.stdout),
+            "stderr": _truncate(proc.stderr),
+        }
+        if input_detail:
+            step["input_detail"] = input_detail
+        steps.append(step)
 
     any_ok = any(s.get("ok") for s in steps)
     return {
@@ -402,5 +598,6 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
         "outputs": outputs,
         "skipped": skipped,
         "steps": steps,
-        "preview_dir": "handshake/preview",
+        "mapped_dir": "phase2.5/output/mapped",
+        "preview_dir": "phase2.5/output/mapped",
     }

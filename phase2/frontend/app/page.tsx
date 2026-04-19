@@ -99,7 +99,7 @@ export default function Page() {
             type="button"
             onClick={() => void runHandshake()}
             disabled={handshakeBusy}
-            title="Run Phase 2.5: AI column handshake (map) then generate Python mapper (codegen). Uses this session’s uploaded source files (csv/tsv/txt/json, any filenames) for codegen previews."
+            title="Phase 2.5: AI column handshake (map) + generate handshake_run_mapper.py (codegen). Uploads are passed to codegen as samples only — they are not transformed until you use “Run mapper on uploads” in the Handshake tab."
             className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-black/30 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {handshakeBusy ? (

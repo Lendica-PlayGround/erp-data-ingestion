@@ -21,6 +21,14 @@ _PKG_DIR = Path(__file__).resolve().parent.parent
 _REPO_ROOT = _PKG_DIR.parent
 
 
+def _chat_completion_limit_kwargs(model: str, n: int) -> dict[str, int]:
+    """OpenAI Chat Completions: newer models reject ``max_tokens`` (use ``max_completion_tokens``)."""
+    m = (model or "").lower()
+    if m.startswith("gpt-5") or m.startswith("o1") or m.startswith("o3") or m.startswith("o4"):
+        return {"max_completion_tokens": n}
+    return {"max_tokens": n}
+
+
 def load_handshake_run(path: Path) -> HandshakeRun:
     return HandshakeRun.model_validate_json(path.read_text(encoding="utf-8"))
 
@@ -33,7 +41,7 @@ def _read_text_limited(path: Path, max_chars: int) -> str:
 
 def _csv_spec_excerpt(path: Path | None) -> str:
     p = path or (_REPO_ROOT / "midlayer-schema-guide" / "midlayer-csv-spec.md")
-    return _read_text_limited(p, 12000)
+    return _read_text_limited(p, 6000)
 
 
 def _extract_python_block(text: str) -> str:
@@ -59,8 +67,12 @@ target mid-layer column(s) or `other`, plus `processing_steps` and confidence.
 Your task: write **one complete Python 3.10+ script** that implements the handshake:
 
 - Read source rows from **arbitrary user-supplied paths** passed on the command line (no hard-coded \
-filenames). Use `argparse` with `--input` (required) and `--output` (required). Support UTF-8. \
-Filenames and extensions vary by client — discover columns from the file header at runtime.
+filenames). The Phase 2 backend always invokes: \
+`python <script> --input <csv_path> --output <output_dir> --table <contacts|customers|invoices>`. \
+You **must** implement these three flags with `argparse` (`--table` required). Support UTF-8. \
+Discover columns from the CSV header at runtime. \
+Write **exactly one** file: `<output_dir>/<table>_mapped.csv` where `<table>` matches `--table` \
+(e.g. `contacts_mapped.csv` for `--table contacts`). Do not use other output basenames.
 - For each table described in the handshake artifact, map columns according to \
 `phase2_column` → `midlayer_columns` and apply `processing_steps` literally where they \
 describe transforms. If `midlayer_columns` is `["other"]`, route the value into `_unmapped` \
@@ -74,12 +86,14 @@ JSON and file previews; derive behavior from that data structures at runtime whe
 constant in the script).
 - Prefer the standard library (`csv`, `json`, `datetime`, `decimal`, `argparse`, `pathlib`). \
 You may use `pandas` only if clearly needed; if you use it, import it and note it in the docstring.
-- The script must be **runnable**: `python generated_mapper.py --input /path/to/any_source.csv --output out.csv` \
+- The script must be **runnable**: \
+`python generated_mapper.py --input /path/to/source.csv --output /tmp/out --table contacts` \
 (never embed a specific client filename in the code).
 - Include a short module docstring stating the script was produced from a handshake artifact \
 and is table-specific or multi-table as appropriate.
-- If multiple mid-layer tables exist in the handshake, either document `--table` to choose one \
-or write separate output files with `--output` as a directory — pick one clear UX.
+- If multiple mid-layer tables exist in the handshake, still use **one `--table` per run**; the \
+backend calls the script once per table. Unsupported `--table` values should exit with a clear \
+error on stderr.
 
 Output **only** the Python source code. No markdown outside a single ```python block is OK; \
 if you use a fence, put the entire program inside it. No explanations before or after.
@@ -97,7 +111,7 @@ def generate_handshake_mapper_script(
     midlayer_csv_spec_path: Path | None,
 ) -> str:
     proc_p = procedure_md_path or (_PKG_DIR / "phase2.5.md")
-    procedure = _read_text_limited(proc_p, 8000)
+    procedure = _read_text_limited(proc_p, 4000)
     csv_rules = _csv_spec_excerpt(midlayer_csv_spec_path)
     previews = build_inputs_section(input_paths)
     slugs = [t.phase2_table for t in handshake.tables]
@@ -106,14 +120,22 @@ def generate_handshake_mapper_script(
         phase2_cols = phase2_columns_snippets(phase2_output, slugs)
 
     canonical = table_columns()
+    _MAX_HANDSHAKE_JSON = 35_000
+    hs_json = handshake.model_dump_json(indent=2)
+    if len(hs_json) > _MAX_HANDSHAKE_JSON:
+        hs_json = (
+            hs_json[:_MAX_HANDSHAKE_JSON]
+            + "\n... [truncated: handshake JSON exceeded token budget; reduce column count or step text] ..."
+        )
+
     user = textwrap.dedent(
         f"""\
         ## Phase 2.5 procedure (from phase2.5.md)
         {procedure}
 
-        ## handshake_mapping.json (full artifact; implement this mapping)
+        ## handshake_mapping.json (artifact to implement; may be truncated if very large)
         ```json
-        {handshake.model_dump_json(indent=2)}
+        {hs_json}
         ```
 
         ## Canonical mid-layer CSV column order (enforce headers in this order)
@@ -143,7 +165,7 @@ def generate_handshake_mapper_script(
             {"role": "user", "content": user},
         ],
         temperature=0.2,
-        max_tokens=16000,
+        **_chat_completion_limit_kwargs(model, 8192),
     )
     choice = completion.choices[0].message.content
     if not choice:

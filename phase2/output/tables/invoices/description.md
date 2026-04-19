@@ -1,16 +1,19 @@
 # Invoices
 
 ## Summary
-This table contains invoice data for ACME Co., detailing accounts receivable transactions. It includes information about invoice numbers, associated customer IDs, issue and due dates, payment status, and amounts.
+Sales invoices exported from Invoiced.com for Div’s Furniture Manufacturing Co. Represents billing documents issued to customers for furniture sales and related charges.
 
 ## Row meaning
-Each row represents a single invoice issued to a customer.
+Each row represents a single invoice, including status, dates, monetary amounts, links to hosted documents, and embedded JSON for line items, discounts, taxes, and shipping.
 
 ## Relationships
-This table likely links to a customers table via the `contact_external_id` field, which represents the customer associated with each invoice.
+- `customer` is a foreign key to `customers.id` (customer-to-invoice = 1-to-many).
+- Line items, discounts, taxes, and shipping addresses are stored as JSON blobs (`items_json`, `discounts_json`, `taxes_json`, `ship_to_json`) and would typically be normalized into separate tables.
 
 ## Datasource
-Filename: uploads/acme-co_invoices_initial_20260418.csv
+- File: `Div_s_Furniture_Manufacturing_Co.xlsx`
+- Sheet: `invoices`
+- Upstream system noted in `meta` sheet as Invoiced.com.
 
 ## Retrieval process
-This dataset appears to be a static CSV file, suggesting it was exported from a system like Stripe. It includes metadata such as source system and mapping version, indicating it might be part of a larger data integration process.
+In the Excel context this is a static extract. In the source Invoiced API this would typically come from a `GET /invoices` endpoint with pagination and filters such as `updated_at` or `date` for incremental loads. For this workbook, ingestion is a full refresh of the `invoices` sheet on each pull.

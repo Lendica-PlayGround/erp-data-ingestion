@@ -76,11 +76,14 @@ def _build_user_message(
         else ""
     )
     desc = (
-        (pt.description_text or "")[:12000]
+        (pt.description_text or "")[:8000]
         if pt.description_text
         else "(no description.md)"
     )
     cols_json = json.dumps(pt.columns_doc, indent=2, ensure_ascii=False)
+    _MAX_COLS_CHARS = 10_000
+    if len(cols_json) > _MAX_COLS_CHARS:
+        cols_json = cols_json[:_MAX_COLS_CHARS] + "\n... [columns.json truncated for API size] ..."
     guide_path = midlayer_v1.parent.parent / "midlayer-schema-guide.md"
     guide_blurb = ""
     if guide_path.is_file():
@@ -91,6 +94,12 @@ def _build_user_message(
         f"### {t}\n{schema_summary_json(midlayer_v1, t)}"
         for t in ("invoices", "customers", "contacts")
     )
+    _MAX_SCHEMA_CHARS = 12_000
+    if len(schema_blocks) > _MAX_SCHEMA_CHARS:
+        schema_blocks = (
+            schema_blocks[:_MAX_SCHEMA_CHARS]
+            + "\n... [mid-layer schema summaries truncated for API size] ..."
+        )
 
     return f"""\
 ## Phase 2 table
@@ -121,6 +130,9 @@ def map_phase2_table(
     allowed_by_table = table_columns()
     # Include allow-lists so the model cannot hallucinate names.
     allow_json = json.dumps(allowed_by_table, indent=2, ensure_ascii=False)
+    _MAX_ALLOW = 6000
+    if len(allow_json) > _MAX_ALLOW:
+        allow_json = allow_json[:_MAX_ALLOW] + "\n... [truncated] ..."
 
     user_msg_full = (
         user_msg
@@ -165,7 +177,18 @@ def map_phase2_table(
     for name in phase2_names:
         ch = by_name.get(name)
         if not ch:
-            raise RuntimeError(f"Missing mapping for Phase 2 column: {name}")
+            log.warning(
+                "Model omitted Phase 2 column %r; defaulting to midlayer_columns=[other]",
+                name,
+            )
+            ch = ColumnHandshake(
+                phase2_column=name,
+                midlayer_columns=["other"],
+                processing_steps=[
+                    "Model output omitted this column; mapped to other pending review.",
+                ],
+                confidence=0.0,
+            )
         mids = ch.midlayer_columns
         if mids == ["other"]:
             pass
