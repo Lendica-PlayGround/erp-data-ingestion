@@ -65,7 +65,37 @@ class SupabaseStateStore(StateStore):
         return out
 
 
+def _supabase_env_looks_real() -> bool:
+    url = os.getenv("SUPABASE_URL", "").strip()
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key:
+        return False
+    placeholders = ("your-project", "example", "replace", "changeme")
+    low_url = url.lower()
+    low_key = key.lower()
+    if any(p in low_url for p in placeholders) or any(low_key.startswith(p) for p in placeholders):
+        return False
+    return low_url.startswith("https://") and ".supabase." in low_url
+
+
 def store_from_env() -> StateStore:
-    if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
+    """Pick a store by env.
+
+    Precedence:
+      1. Real-looking Supabase config -> SupabaseStateStore
+      2. MIRA_STORE_PATH (or default `.mira_workspace/state.json`) -> FileStateStore
+      3. InMemoryStateStore (last resort)
+    """
+    if _supabase_env_looks_real():
         return SupabaseStateStore()
-    return InMemoryStateStore()
+
+    from pathlib import Path
+
+    from agent.stores.file_store import FileStateStore
+
+    default_path = Path(os.getenv("MIRA_WORKSPACE", ".mira_workspace")) / "state.json"
+    path = Path(os.getenv("MIRA_STORE_PATH", str(default_path)))
+    try:
+        return FileStateStore(path.resolve())
+    except OSError:
+        return InMemoryStateStore()

@@ -11,6 +11,11 @@ from uuid import UUID, uuid4
 from agent.models.onboarding import OnboardingState, SourceProfile
 from agent.runtime.context import RunContext
 from agent.runtime.graph import build_mira_graph
+from agent.runtime.session_memory import (
+    append_conversation_turn,
+    maybe_capture_message_facts,
+    recent_dialogue_messages,
+)
 from agent.runtime.telegram_bot import run_polling
 from agent.stores.supabase_store import store_from_env
 
@@ -44,11 +49,16 @@ def cmd_chat(args: argparse.Namespace) -> int:
         print("Unknown run_id", file=sys.stderr)
         return 1
     ctx = RunContext(store=store, run_id=rid, workspace_root=_workspace())
-    graph = build_mira_graph(ctx)
     msg = args.message
-    out = graph.invoke({"messages": [("user", msg)]})
+    st = maybe_capture_message_facts(store, rid, msg) or st
+    graph = build_mira_graph(ctx, state=st)
+    messages = recent_dialogue_messages(st) + [("user", msg)]
+    out = graph.invoke({"messages": messages})
     last = out["messages"][-1]
-    print(getattr(last, "content", last))
+    content = str(getattr(last, "content", last))
+    append_conversation_turn(store, rid, "user", msg, channel="cli")
+    append_conversation_turn(store, rid, "assistant", content, channel="cli")
+    print(content)
     return 0
 
 
@@ -74,10 +84,14 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         ok = False
     if not os.getenv("TELEGRAM_BOT_TOKEN"):
         print("TELEGRAM_BOT_TOKEN missing — Telegram mode unavailable.")
-    if os.getenv("SUPABASE_URL"):
-        print("Supabase URL present — persistence enabled when service role key set.")
+    from agent.stores.supabase_store import _supabase_env_looks_real
+
+    if _supabase_env_looks_real():
+        print("Supabase env present and non-placeholder — Supabase store will be used.")
+    elif os.getenv("SUPABASE_URL"):
+        print("SUPABASE_URL looks like a placeholder — falling back to local file store.")
     else:
-        print("Supabase env absent — using in-memory state store.")
+        print("Supabase env absent — using local file store (.mira_workspace/state.json).")
     return 0 if ok else 2
 
 

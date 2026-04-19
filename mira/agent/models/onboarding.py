@@ -64,6 +64,9 @@ SemanticRole = Literal[
 ]
 
 BlockerNeeds = Literal["customer_input", "fde_input", "research"]
+StakeholderRole = Literal["customer", "fde", "internal", "other"]
+ConversationRole = Literal["user", "assistant", "system"]
+ResearchStatus = Literal["not_started", "heuristic", "web", "blocked"]
 
 
 class SourceProfile(BaseModel):
@@ -146,6 +149,65 @@ class Approval(BaseModel):
     fde_telegram_user_id: Optional[str] = None
 
 
+class StakeholderSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = ""
+    role: StakeholderRole = "other"
+    company: str = ""
+    telegram_username: Optional[str] = None
+    telegram_user_id: Optional[str] = None
+    notes: str = ""
+
+
+class ConversationTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: ConversationRole
+    text: str
+    channel: str = "chat"
+    created_at: datetime
+
+
+class ResearchSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: ResearchStatus = "not_started"
+    source_system: SourceSystem = "unknown"
+    summary: str = ""
+    doc_urls: list[str] = Field(default_factory=list)
+    likely_access_paths: list[str] = Field(default_factory=list)
+    known_quirks: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    note: str = ""
+    researched_at: Optional[datetime] = None
+
+
+class RecommendedPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str = ""
+    recommended_access_method: AccessMethod = "unknown"
+    steps: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    updated_at: Optional[datetime] = None
+
+
+class TelegramUiPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    muted: bool = False
+    muted_at: Optional[datetime] = None
+    muted_by_user_id: Optional[str] = None
+
+
+class UiPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    telegram: TelegramUiPreferences = Field(default_factory=TelegramUiPreferences)
+
+
 class OnboardingState(BaseModel):
     """Persisted row payload for `onboarding_runs.document` (plus indexed `state` column)."""
 
@@ -162,8 +224,17 @@ class OnboardingState(BaseModel):
     mapping_contract: Optional[dict[str, Any]] = None
     approval: Approval = Field(default_factory=Approval)
     blockers: list[Blocker] = Field(default_factory=list)
+    project_objective: str = ""
+    success_criteria: list[str] = Field(default_factory=list)
+    stakeholder_context: list[StakeholderSummary] = Field(default_factory=list)
+    constraints: list[str] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
     next_question: Optional[str] = None
     confidence_overall: float = 0.0
+    research_summary: ResearchSummary = Field(default_factory=ResearchSummary)
+    recommended_plan: RecommendedPlan = Field(default_factory=RecommendedPlan)
+    ui_preferences: UiPreferences = Field(default_factory=UiPreferences)
+    conversation_history: list[ConversationTurn] = Field(default_factory=list)
     phase3: dict[str, Any] = Field(default_factory=dict)
     """PR URLs, dry-run summaries, dashboard URL, etc. (extensible)."""
 
@@ -177,5 +248,5 @@ class OnboardingState(BaseModel):
             else:
                 data[k] = v
         updated = OnboardingState.model_validate(data)
-        for name in self.model_fields:
+        for name in type(self).model_fields:
             setattr(self, name, getattr(updated, name))
