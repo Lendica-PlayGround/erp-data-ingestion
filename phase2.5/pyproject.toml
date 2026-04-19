@@ -1,0 +1,14 @@
+[project]
+name = "handshake-mapping"
+version = "0.1.0"
+description = "Phase 2.5 AI handshake mapping to mid-layer v1"
+requires-python = ">=3.10"
+dependencies = [
+  "openai>=1.54,<2",
+  "pydantic>=2.6,<3",
+  "pydantic-settings>=2.2,<3",
+  "email-validator>=2,<3",
+]
+
+[project.scripts]
+handshake-mapping = "handshake_mapping.__main__:main"

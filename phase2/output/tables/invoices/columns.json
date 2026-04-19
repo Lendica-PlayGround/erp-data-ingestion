@@ -24,7 +24,7 @@
     {"name": "_company_id", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-z0-9-]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Identifier for the company associated with the invoice."},
     {"name": "_ingested_at", "datatype": "datetime", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Timestamp when the invoice data was ingested."},
     {"name": "_source_file", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "File path of the source file from which the data was ingested."},
-    {"name": "_mapping_version", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-z]+\.[a-z]+@[0-9]+\.[0-9]+\.[0-9]+$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Version of the mapping used for data ingestion."},
+    {"name": "_mapping_version", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-z]+\\.[a-z]+@[0-9]+\\.[0-9]+\\.[0-9]+$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Version of the mapping used for data ingestion."},
     {"name": "_row_hash", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-f0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Hash of the row data for integrity verification."}
   ]
 }
