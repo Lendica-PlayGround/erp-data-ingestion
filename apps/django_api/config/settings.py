@@ -5,30 +5,12 @@ Django settings for ERP Data Ingestion API.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BASE_DIR.parents[1]
 
-
-def _load_repo_dotenv(path: Path) -> None:
-    """Load simple KEY=VALUE pairs from the repo root .env if present."""
-    if not path.exists():
-        return
-
-    for raw_line in path.read_text().splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if not key or key in os.environ:
-            continue
-        if value[:1] == value[-1:] and value[:1] in {"'", '"'}:
-            value = value[1:-1]
-        os.environ[key] = value
-
-
-_load_repo_dotenv(REPO_ROOT / ".env")
+load_dotenv(REPO_ROOT / ".env")
 
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",

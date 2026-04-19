@@ -57,4 +57,57 @@ Phase 2–3 **Mira** is isolated under [`mira/`](./mira/):
 - `mira/supabase/migrations/` — `onboarding_runs`, `mid_*`, `target_*`, and load-metadata SQL.
 - `mira/supabase/load_mid_from_mapper.py` — runs the generated handshake mapper and upserts the resulting mid CSV into Supabase Postgres.
 
-Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.
+Install locally from repo root for Mira-only work: `pip install -e ".[dev]"` (optional: `.[supabase]`, `.[dashboard]`).
+
+## Bootstrap
+
+### 1. Create a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. Initialize environment variables
+
+```bash
+cp .env.example .env
+```
+
+Fill in the values you need for:
+- Django / Postgres
+- Supabase Phase 1 bucket access
+- Mira / OpenAI / Telegram if you are running Phase 2–3
+- Supabase S3 storage for Phase 4 artifacts (`SUPABASE_STORAGE_S3_*`)
+- ClickHouse
+
+The Django settings load `.env` automatically from the repo root.
+
+### 3. Verify the Phase 4 package
+
+```bash
+export PYTHONPATH=$PWD/src
+pytest -q tests
+```
+
+### 4. Verify Mira
+
+```bash
+PYTHONPATH=$PWD/mira pytest -q mira/tests
+```
+
+### 5. Verify Django
+
+```bash
+python apps/django_api/manage.py check
+```
+
+### 6. Initialize Phase 4 publisher from env
+
+```python
+from erp_data_ingestion.publish import Phase4Publisher
+
+publisher = Phase4Publisher.from_env()
+```
