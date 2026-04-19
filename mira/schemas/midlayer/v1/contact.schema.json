@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://erp-data-ingestion/schemas/midlayer/v1/contact.schema.json",
+  "title": "MidLayer Contact v1",
+  "description": "Canonical mid-layer Contact schema, aligned with merge.dev CRM Contact common model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "external_id",
+    "_source_system",
+    "_source_record_id",
+    "_company_id",
+    "_ingested_at",
+    "_source_file",
+    "_mapping_version",
+    "_row_hash"
+  ],
+  "properties": {
+    "external_id": { "type": "string" },
+    "first_name": { "type": ["string", "null"] },
+    "last_name": { "type": ["string", "null"] },
+    "account_external_id": {
+      "type": ["string", "null"],
+      "description": "External id of a linked Account (company)."
+    },
+    "addresses": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of merge.dev Address objects. Keys alphabetically sorted; absent sub-fields omitted."
+    },
+    "email_addresses": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of {email_address, email_address_type} objects (merge.dev CRM EmailAddress)."
+    },
+    "phone_numbers": {
+      "type": ["string", "null"],
+      "description": "Minified JSON array of {phone_number, phone_number_type} objects (merge.dev CRM PhoneNumber)."
+    },
+    "last_activity_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "remote_created_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "remote_was_deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "true when the source tombstoned the record. Row is still emitted so deletes propagate."
+    },
+    "_unmapped": {
+      "type": ["string", "null"],
+      "description": "Minified JSON object preserving source columns the mapper could not map. `{}` or empty string when none."
+    },
+    "_source_system": {
+      "type": "string",
+      "description": "Slug identifying source system (e.g. 'stripe', 'google_sheets')."
+    },
+    "_source_record_id": {
+      "type": "string",
+      "description": "Raw source row id before any normalization."
+    },
+    "_company_id": {
+      "type": "string",
+      "description": "Internal tenant/company identifier."
+    },
+    "_ingested_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of the ingestion run (one timestamp per run, stamped on every row)."
+    },
+    "_source_file": {
+      "type": "string",
+      "description": "Relative path of the source seed/file or connector-job URI."
+    },
+    "_mapping_version": {
+      "type": "string",
+      "description": "Semver of the mapping artifact used (e.g. 'google_sheets.contact@0.1.0')."
+    },
+    "_row_hash": {
+      "type": "string",
+      "description": "SHA-256 hex of the canonicalized mapped row (see schema guide \u00a77.1)."
+    }
+  }
+}
