@@ -88,7 +88,7 @@ One row = one invoice (receivable) or bill (payable). The `type` enum distinguis
 
 ### Merge.dev fields deliberately **not** modeled at v1
 
-`company`, `payments`, `tracking_categories`, `line_items`, `applied_payments`, `applied_credit_notes`, `inclusive_of_tax`, `accounting_period`. These belong to Phase 4 (target DB) or to a future `invoice_line_items` table. Any source values for these get preserved under `_unmapped`.
+`company`, `payments`, `tracking_categories`, `line_items`, `applied_payments`, `applied_credit_notes`, `inclusive_of_tax`, `accounting_period`. These belong to the transformed `target_*` layer or to a future `invoice_line_items` table. Any source values for these get preserved under `_unmapped`.
 
 ### Source mapping notes
 
@@ -223,29 +223,30 @@ Two rows with the same mapped content produce the same `_row_hash` regardless of
 
 - Schemas are frozen under `schemas/midlayer/v1/`. Additive nullable fields may stay on `v1` **with a `_mapping_version` bump**.
 - Any rename, type change, or removal requires a new folder `schemas/midlayer/v2/` and a dual-write period.
-- Each row carries `_mapping_version`; `_manifest/<date>.json` carries `schema_version`. Consumers pin both.
+- Each row carries `_mapping_version`; load-batch metadata carries `schema_version`. Consumers pin both.
 
 ## 9. How this guide fits into the pipeline
 
 ```
                                   ┌──────────────────────────┐
- raw source rows  ──► mapper ──►  │   mid-layer v1 row       │  ──► writer ──► CSV
+ raw source rows  ──► mapper ──►  │   mid-layer v1 row       │  ──► loader ──► Supabase Postgres
  (Stripe CSV,                     │ (this schema guide)      │         │
   Google Sheets, …)               └──────────────────────────┘         │
                                                                         ▼
-                                              mira/midlayer-schema-guide/midlayer-csv-spec.md
-                                              (how the CSV lands on disk)
+                                              mira/midlayer-schema-guide/midlayer-db-spec.md
+                                              (how the row lands in `mid_*` / `target_*`)
 ```
 
 - **This document (`mira/midlayer-schema-guide/midlayer-schema-guide.md`)** defines *what* a mid-layer row is (semantics, types, enums, merge.dev alignment).
-- **`mira/midlayer-schema-guide/midlayer-csv-spec.md`** defines *how* those rows are written to disk (folder layout, file naming, sidecar JSON, validation gate).
-- **`seeds/samples/midlayer-csv/`** shows *concrete examples* of both, for all three tables.
+- **`mira/midlayer-schema-guide/midlayer-db-spec.md`** defines *how* those rows are stored in Supabase Postgres (`mid_*`, `target_*`, load metadata, validation gate).
+- **`mira/supabase/load_mid_from_mapper.py`** is the current operational bridge from the generated `handshake_run_mapper.py` script into the canonical `mid_*` tables.
+- **`seeds/samples/midlayer-csv/`** remains a historical CSV-first fixture set and still helps illustrate normalized records.
 
 ### Precedence when these disagree
 
 1. The JSON Schemas (`mira/midlayer/v1/*.schema.json`) are the machine-checkable contract for **which fields exist, their types, nullability, and enum values**.
 2. This guide is authoritative for **semantics, formatting conventions, and merge.dev alignment** (e.g. money in major units with 4 decimal places, ISO 8601 UTC with `Z`, alphabetical key ordering in JSON cells). Where a convention is not expressible in JSON Schema, this guide wins and the mapper must enforce it.
-3. `midlayer-csv-spec.md` is authoritative for **on-disk concerns**: bucket layout, file naming, sidecar JSON, validation gate, initial-vs-delta semantics.
+3. `midlayer-db-spec.md` is authoritative for **relational storage concerns**: table families, load metadata, validation gate, and initial-vs-delta semantics.
 4. `schemas.midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS` is authoritative for **CSV header order**. Markdown tables in this guide are illustrative; if they drift, trust the Python list.
 
 ## 10. Confirmation checklist
@@ -255,5 +256,5 @@ Two rows with the same mapped content produce the same `_row_hash` regardless of
 - [x] `mira/midlayer/v1/contact.schema.json` exists and is aligned with merge.dev CRM Contact.
 - [x] All three schemas share the same metadata block and enforce `additionalProperties: false`.
 - [x] Pydantic models in `mira/midlayer/v1/models.py` mirror the JSON Schemas and define canonical column order.
-- [x] CSV on-disk contract documented separately in `mira/midlayer-schema-guide/midlayer-csv-spec.md`.
-- [x] Worked examples for all three tables committed under `seeds/samples/midlayer-csv/`.
+- [x] Database storage contract documented separately in `mira/midlayer-schema-guide/midlayer-db-spec.md`.
+- [x] Historical worked examples for all three tables committed under `seeds/samples/midlayer-csv/`.
