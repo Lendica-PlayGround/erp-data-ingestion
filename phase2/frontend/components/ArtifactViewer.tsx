@@ -3,22 +3,32 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { readArtifact } from "@/lib/api";
+import { readArtifact, readSessionUpload } from "@/lib/api";
 
-type Props = { path: string | null; refreshKey: number };
+type Props = {
+  path: string | null;
+  refreshKey: number;
+  /** When set, ``path`` is a client upload path (e.g. ``uploads/foo.csv``) under this session. */
+  sessionId?: string;
+};
 
-export function ArtifactViewer({ path, refreshKey }: Props) {
+type PreviewData = Awaited<ReturnType<typeof readArtifact>>;
+
+export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
   const [state, setState] = useState<{
     loading: boolean;
     error?: string;
-    data?: Awaited<ReturnType<typeof readArtifact>>;
+    data?: PreviewData;
   }>({ loading: false });
 
   useEffect(() => {
     if (!path) return;
     let aborted = false;
     setState({ loading: true });
-    readArtifact(path)
+    const load = sessionId
+      ? readSessionUpload(sessionId, path)
+      : readArtifact(path);
+    load
       .then((data) => {
         if (!aborted) setState({ loading: false, data });
       })
@@ -28,12 +38,12 @@ export function ArtifactViewer({ path, refreshKey }: Props) {
     return () => {
       aborted = true;
     };
-  }, [path, refreshKey]);
+  }, [path, refreshKey, sessionId]);
 
   if (!path) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sm text-ink-400">
-        Select a file on the left to view.
+        {sessionId ? "Select an upload to preview." : "Select a file on the left to view."}
       </div>
     );
   }
@@ -72,8 +82,8 @@ export function ArtifactViewer({ path, refreshKey }: Props) {
       <pre className="h-full overflow-auto p-4 font-mono text-[12px] text-ink-100">{pretty}</pre>
     );
   }
-  if (path.endsWith(".csv")) {
-    return <CsvTable text={state.data.content} />;
+  if (path.endsWith(".csv") || path.endsWith(".tsv")) {
+    return <CsvTable text={state.data.content} delimiter={path.endsWith(".tsv") ? "\t" : ","} />;
   }
   return (
     <pre className="h-full overflow-auto p-4 font-mono text-[12px] text-ink-100">
@@ -82,12 +92,12 @@ export function ArtifactViewer({ path, refreshKey }: Props) {
   );
 }
 
-function CsvTable({ text }: { text: string }) {
+function CsvTable({ text, delimiter = "," }: { text: string; delimiter?: string }) {
   const rows = text
     .split(/\r?\n/)
     .filter((l) => l.length > 0)
     .slice(0, 200)
-    .map(parseCsvRow);
+    .map((line) => parseDelimitedRow(line, delimiter));
   if (rows.length === 0) return <div className="p-4 text-ink-400 text-sm">(empty)</div>;
   const [header, ...body] = rows;
   return (
@@ -121,7 +131,10 @@ function CsvTable({ text }: { text: string }) {
   );
 }
 
-function parseCsvRow(line: string): string[] {
+function parseDelimitedRow(line: string, delimiter: string): string[] {
+  if (delimiter !== ",") {
+    return line.split(delimiter);
+  }
   const out: string[] = [];
   let cur = "";
   let inQuotes = false;

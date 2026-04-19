@@ -99,6 +99,11 @@ output/
 !phase2/output/
 !phase2/output/**
 
+# Phase 2.5: track one reference mapper; keep other generated output ignored.
+!phase2.5/output/
+phase2.5/output/**
+!phase2.5/output/handshake_run_mapper.py
+
 # Phase 2 backend local state
 phase2/backend/uploads/
 phase2/backend/.venv/

@@ -101,3 +101,38 @@ async def list_uploads(session_id: str) -> dict:
         if p.is_file()
     ]
     return {"session_id": session_id, "files": files}
+
+
+@router.get("/uploads/{session_id}/content")
+async def read_upload_content(session_id: str, path: str = Query(..., min_length=1)) -> dict:
+    """Return UTF-8 text or mark binary — same shape as ``GET /api/artifacts/{path}``."""
+    raw = path.strip()
+    if raw.startswith("uploads/"):
+        rel = raw[len("uploads/") :].lstrip("/")
+    else:
+        rel = raw.lstrip("/")
+    if not rel or ".." in Path(rel).parts:
+        raise HTTPException(400, "invalid path")
+
+    root = get_settings().upload_path / session_id
+    target = (root / rel).resolve()
+    try:
+        target.relative_to(root.resolve())
+    except ValueError as exc:
+        raise HTTPException(400, "path escapes session dir") from exc
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "not found")
+    data = target.read_bytes()
+    try:
+        text = data.decode("utf-8")
+        binary = False
+    except UnicodeDecodeError:
+        text = ""
+        binary = True
+    return {
+        "path": path,
+        "size": len(data),
+        "mtime": target.stat().st_mtime,
+        "binary": binary,
+        "content": text,
+    }
