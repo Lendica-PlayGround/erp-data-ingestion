@@ -3,22 +3,27 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { readArtifact, readSessionUpload } from "@/lib/api";
+import {
+  readArtifact,
+  readHandshakeContent,
+  readSessionUpload,
+  type FileContentPayload,
+} from "@/lib/api";
 
 type Props = {
   path: string | null;
   refreshKey: number;
   /** When set, ``path`` is a client upload path (e.g. ``uploads/foo.csv``) under this session. */
   sessionId?: string;
+  /** When set, ``path`` is relative to ``phase2.5/output/`` (handshake tab). */
+  handshake?: boolean;
 };
 
-type PreviewData = Awaited<ReturnType<typeof readArtifact>>;
-
-export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
+export function ArtifactViewer({ path, refreshKey, sessionId, handshake }: Props) {
   const [state, setState] = useState<{
     loading: boolean;
     error?: string;
-    data?: PreviewData;
+    data?: FileContentPayload;
   }>({ loading: false });
 
   useEffect(() => {
@@ -27,7 +32,9 @@ export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
     setState({ loading: true });
     const load = sessionId
       ? readSessionUpload(sessionId, path)
-      : readArtifact(path);
+      : handshake
+        ? readHandshakeContent(path)
+        : readArtifact(path);
     load
       .then((data) => {
         if (!aborted) setState({ loading: false, data });
@@ -38,12 +45,16 @@ export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
     return () => {
       aborted = true;
     };
-  }, [path, refreshKey, sessionId]);
+  }, [path, refreshKey, sessionId, handshake]);
 
   if (!path) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sm text-ink-400">
-        {sessionId ? "Select an upload to preview." : "Select a file on the left to view."}
+        {sessionId
+          ? "Select an upload to preview."
+          : handshake
+            ? "Select a file under phase2.5/output."
+            : "Select a file on the left to view."}
       </div>
     );
   }
@@ -54,6 +65,17 @@ export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
     return <div className="p-6 text-sm text-red-300">{state.error}</div>;
   }
   if (!state.data) return null;
+
+  const xp = state.data.xlsx_preview;
+  if (xp?.sheets?.length) {
+    return (
+      <XlsxPreview
+        maxRows={xp.max_rows_per_sheet}
+        sheets={xp.sheets}
+      />
+    );
+  }
+
   if (state.data.binary) {
     return (
       <div className="p-6 text-sm text-ink-400">
@@ -89,6 +111,76 @@ export function ArtifactViewer({ path, refreshKey, sessionId }: Props) {
     <pre className="h-full overflow-auto p-4 font-mono text-[12px] text-ink-100">
       {state.data.content}
     </pre>
+  );
+}
+
+function XlsxPreview({
+  maxRows,
+  sheets,
+}: {
+  maxRows: number;
+  sheets: { name: string; rows: string[][]; truncated: boolean }[];
+}) {
+  return (
+    <div className="h-full overflow-y-auto p-4">
+      <p className="mb-4 text-[11px] text-ink-500">
+        Spreadsheet preview — first {maxRows} rows per sheet (large files are not fully loaded).
+      </p>
+      <div className="space-y-6">
+        {sheets.map((sheet) => (
+          <div key={sheet.name}>
+            <h3 className="mb-2 border-b border-ink-700 pb-1 text-xs font-semibold text-ink-200">
+              {sheet.name}
+              {sheet.truncated ? (
+                <span className="ml-2 font-normal text-ink-500">(may have more rows)</span>
+              ) : null}
+            </h3>
+            {sheet.rows.length === 0 ? (
+              <p className="text-sm text-ink-400">(empty sheet)</p>
+            ) : (
+              <RowsTable rows={sheet.rows} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RowsTable({ rows }: { rows: string[][] }) {
+  if (rows.length === 0) return null;
+  const header = rows[0] ?? [];
+  const body = rows.slice(1);
+  return (
+    <div className="overflow-auto rounded border border-ink-800">
+      <table className="w-full border-collapse text-[12px]">
+        <thead className="sticky top-0 bg-ink-800">
+          <tr>
+            {header.map((h, i) => (
+              <th
+                key={i}
+                className="border-b border-ink-700 px-2 py-1.5 text-left font-semibold text-ink-100"
+              >
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {body.length > 0 ? (
+          <tbody>
+            {body.map((r, i) => (
+              <tr key={i} className="odd:bg-ink-900 even:bg-ink-800/40">
+                {r.map((c, j) => (
+                  <td key={j} className="border-b border-ink-800 px-2 py-1 text-ink-200">
+                    {c}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        ) : null}
+      </table>
+    </div>
   );
 }
 

@@ -6,14 +6,14 @@ import asyncio
 import json
 import logging
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from ..file_preview import content_payload
 from ..settings import BACKEND_DIR, Settings, get_settings
 
 log = logging.getLogger(__name__)
@@ -22,9 +22,10 @@ router = APIRouter()
 
 _REPO_ROOT = BACKEND_DIR.parent.parent
 _PHASE25 = _REPO_ROOT / "phase2.5"
+_PHASE25_OUT = _PHASE25 / "output"
 _MIDLAYER_V1 = _REPO_ROOT / "midlayer-schema-guide" / "midlayer" / "v1"
 # Source-like uploads for codegen previews (any basename; matched by suffix only).
-_SOURCE_SUFFIXES = frozenset({".csv", ".tsv", ".txt", ".json", ".jsonl"})
+_SOURCE_SUFFIXES = frozenset({".csv", ".tsv", ".txt", ".json", ".jsonl", ".xlsx", ".xlsm"})
 _MAX_LOG_CHARS = 12_000
 
 
@@ -79,25 +80,16 @@ def _run_subprocess(
     )
 
 
-def _resolve_handshake_json(settings: Settings) -> Path | None:
-    """Prefer published workspace copy; fall back to phase2.5/output."""
-    p = settings.output_path / "handshake" / "handshake_mapping.json"
-    if p.is_file():
-        return p
-    alt = _PHASE25 / "output" / "handshake_mapping.json"
-    if alt.is_file():
-        return alt
-    return None
+def _resolve_handshake_json(_settings: Settings) -> Path | None:
+    """Handshake mapping JSON lives only under ``phase2.5/output/``."""
+    p = _PHASE25_OUT / "handshake_mapping.json"
+    return p if p.is_file() else None
 
 
-def _resolve_mapper_script(settings: Settings) -> Path | None:
-    p = settings.output_path / "handshake" / "handshake_run_mapper.py"
-    if p.is_file():
-        return p
-    alt = _PHASE25 / "output" / "handshake_run_mapper.py"
-    if alt.is_file():
-        return alt
-    return None
+def _resolve_mapper_script(_settings: Settings) -> Path | None:
+    """Generated mapper script lives only under ``phase2.5/output/``."""
+    p = _PHASE25_OUT / "handshake_run_mapper.py"
+    return p if p.is_file() else None
 
 
 def _pick_input_for_table(uploads: list[Path], table: str) -> Path | None:
@@ -124,25 +116,44 @@ def _phase2_table_csv(phase2_out: Path, phase2_table: str) -> Path | None:
     return csvs[0] if csvs else None
 
 
-def _publish_artifacts(
-    phase25_output: Path,
-    output_root: Path,
-    *,
-    codegen_ok: bool,
-) -> list[str]:
-    dest = output_root / "handshake"
-    dest.mkdir(parents=True, exist_ok=True)
-    out: list[str] = []
-    hj = phase25_output / "handshake_mapping.json"
-    if hj.is_file():
-        shutil.copy2(hj, dest / "handshake_mapping.json")
-        out.append("handshake/handshake_mapping.json")
-    if codegen_ok:
-        hp = phase25_output / "handshake_run_mapper.py"
-        if hp.is_file():
-            shutil.copy2(hp, dest / "handshake_run_mapper.py")
-            out.append("handshake/handshake_run_mapper.py")
-    return out
+@router.get("/handshake/artifacts")
+async def list_handshake_artifacts() -> dict:
+    """List files under ``phase2.5/output/`` (handshake JSON, mapper, previews)."""
+    root = _PHASE25_OUT
+    if not root.is_dir():
+        return {"files": []}
+    files: list[dict] = []
+    try:
+        for p in sorted(root.rglob("*")):
+            if p.is_dir() or any(part.startswith(".") for part in p.relative_to(root).parts):
+                continue
+            stat = p.stat()
+            files.append(
+                {
+                    "path": p.relative_to(root).as_posix(),
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime,
+                }
+            )
+    except OSError as exc:
+        raise HTTPException(500, f"cannot list phase2.5 output: {exc!s}") from exc
+    return {"files": files}
+
+
+@router.get("/handshake/content")
+async def read_handshake_content(path: str = Query(..., min_length=1)) -> dict:
+    """Read a file under ``phase2.5/output/`` (relative path)."""
+    if ".." in path.split("/"):
+        raise HTTPException(400, "invalid path")
+    root = _PHASE25_OUT.resolve()
+    target = (root / path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError as exc:
+        raise HTTPException(400, "path escapes phase2.5 output dir") from exc
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "not found")
+    return content_payload(path, target)
 
 
 @router.post("/handshake/run")
@@ -157,7 +168,7 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
     if not _PHASE25.is_dir():
         raise HTTPException(500, f"phase2.5 directory not found: {_PHASE25}")
 
-    phase25_output = _PHASE25 / "output"
+    phase25_output = _PHASE25_OUT
     phase25_output.mkdir(parents=True, exist_ok=True)
 
     env: dict[str, str] = {k: v for k, v in os.environ.items() if isinstance(v, str)}
@@ -279,11 +290,15 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
             r_gen.returncode,
             (r_gen.stderr or "")[:2000],
         )
-    artifacts = _publish_artifacts(
-        phase25_output,
-        settings.output_path,
-        codegen_ok=codegen_ok,
-    )
+
+    artifacts: list[str] = []
+    hj = phase25_output / "handshake_mapping.json"
+    if hj.is_file():
+        artifacts.append("phase2.5/output/handshake_mapping.json")
+    if codegen_ok:
+        hp = phase25_output / "handshake_run_mapper.py"
+        if hp.is_file():
+            artifacts.append("phase2.5/output/handshake_run_mapper.py")
 
     ok = codegen_ok
     return {
@@ -326,7 +341,7 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
     uploads = _session_source_files(upload_root) if upload_root and upload_root.is_dir() else []
     phase2_out = settings.output_path.resolve()
 
-    preview_dir = settings.output_path / "handshake" / "preview"
+    preview_dir = _PHASE25_OUT / "preview"
     preview_dir.mkdir(parents=True, exist_ok=True)
 
     py = sys.executable
@@ -380,7 +395,7 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
             log.exception("handshake apply subprocess failed for %s", mid)
             raise HTTPException(500, f"mapper failed to start for {mid}: {exc!s}") from exc
 
-        out_rel = f"handshake/preview/{mid}_mapped.csv"
+        out_rel = f"preview/{mid}_mapped.csv"
         out_file = preview_dir / f"{mid}_mapped.csv"
         ok = proc.returncode == 0 and out_file.is_file()
         if ok:
@@ -402,5 +417,5 @@ async def apply_handshake(body: HandshakeApplyBody) -> dict:
         "outputs": outputs,
         "skipped": skipped,
         "steps": steps,
-        "preview_dir": "handshake/preview",
+        "preview_dir": "phase2.5/output/preview",
     }

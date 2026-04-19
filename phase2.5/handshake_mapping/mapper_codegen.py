@@ -106,14 +106,22 @@ def generate_handshake_mapper_script(
         phase2_cols = phase2_columns_snippets(phase2_output, slugs)
 
     canonical = table_columns()
+    _MAX_HANDSHAKE_JSON = 100_000
+    hs_json = handshake.model_dump_json(indent=2)
+    if len(hs_json) > _MAX_HANDSHAKE_JSON:
+        hs_json = (
+            hs_json[:_MAX_HANDSHAKE_JSON]
+            + "\n... [truncated: handshake JSON exceeded token budget; reduce column count or step text] ..."
+        )
+
     user = textwrap.dedent(
         f"""\
         ## Phase 2.5 procedure (from phase2.5.md)
         {procedure}
 
-        ## handshake_mapping.json (full artifact; implement this mapping)
+        ## handshake_mapping.json (artifact to implement; may be truncated if very large)
         ```json
-        {handshake.model_dump_json(indent=2)}
+        {hs_json}
         ```
 
         ## Canonical mid-layer CSV column order (enforce headers in this order)

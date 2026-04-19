@@ -62,7 +62,7 @@ For each field:
 
 - A workspace panel beside the chat with **tabs**:
   - **Files** — Live tree of everything under `phase2/output/` (table descriptions, `INDEX.md`, etc.). Selecting a file opens a text viewer; the list updates when artifacts change (including filesystem events).
-  - **Handshake** — Shows **Phase 2.5** artifacts only: paths under `phase2/output/handshake/` (for example `handshake_mapping.json`, `handshake_run_mapper.py`, and generated preview CSVs). This keeps mapping outputs visible without mixing them with the full output tree.
+  - **Handshake** — Lists files under **`phase2.5/output/`** only (handshake JSON, generated mapper, `preview/` CSVs). Phase 2.5 artifacts are **not** copied into `phase2/output/`.
   - **Commits** — History of git commits that touched `phase2/output/`.
   - **Uploads** — Files uploaded in the current session (with remove).
 
@@ -70,16 +70,18 @@ For each field:
   - Runs the Phase 2.5 pipeline: **map** (LLM column handshake → `handshake_mapping.json`) then **codegen** (generated Python mapper script).
   - Uses the same OpenAI configuration as the Phase 2 backend.
   - Passes this session’s uploaded source-like files (CSV/TSV/TXT/JSON) into codegen when present.
-  - Publishes copies into `phase2/output/handshake/` so they appear in the **Handshake** tab and the general **Files** tree.
+  - Writes outputs under **`phase2.5/output/`** (map + codegen artifacts).
 
 - **Apply mapper & preview** (on the **Handshake** tab):
   - Runs the generated `handshake_run_mapper.py` against available inputs **without** another LLM call.
   - Input resolution per table (from `handshake_mapping.json`): prefer session uploads whose basenames match the mid-layer table (for example `contacts.csv` → `contacts`), else a CSV under `phase2/output/tables/<phase2_table>/` if present.
-  - Writes mid-layer–shaped CSV previews under `phase2/output/handshake/preview/` (for example `contacts_mapped.csv`, `invoices_mapped.csv`) so reviewers can see **converted-to-internal** rows next to the handshake artifacts.
+  - Writes mid-layer–shaped CSV previews under **`phase2.5/output/preview/`** (for example `contacts_mapped.csv`, `invoices_mapped.csv`).
   - Surfaces failures per table (stdout/stderr) in the UI when a run does not succeed.
 
+- **Upload previews** — Text and CSV/TSV show in the viewer; **Excel (`.xlsx` / `.xlsm`)** previews **at most the first 50 rows per worksheet** (large sheets are not fully loaded).
+
 - A real-time update experience where:
-  - Changes under `phase2/output/` are reflected as they happen (including new handshake and preview files).
+  - Changes under `phase2/output/` are reflected as they happen (Phase 2 agent artifacts). Handshake files refresh when the UI reloads that list (e.g. after **Run handshake** / **Apply mapper**).
 
 - Versioning behavior:
   - The agent periodically commits updates under `phase2/output/`.
@@ -88,4 +90,6 @@ For each field:
 ### API (Phase 2 backend)
 
 - `POST /api/handshake/run` — body `{ "session_id": "<id>" }`; runs map + codegen as above.
-- `POST /api/handshake/apply` — body `{ "session_id": "<id>" }`; runs the mapper script and writes `handshake/preview/*.csv`; response includes `outputs`, `skipped` (tables with no input file), and per-table `steps`.
+- `POST /api/handshake/apply` — body `{ "session_id": "<id>" }`; runs the mapper script and writes `phase2.5/output/preview/*.csv`; response includes `outputs`, `skipped`, and per-table `steps`.
+- `GET /api/handshake/artifacts` — lists files under `phase2.5/output/`.
+- `GET /api/handshake/content?path=<relative>` — reads a file under `phase2.5/output/` (same as text/binary/XLSX preview rules as uploads).
