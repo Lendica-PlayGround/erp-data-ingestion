@@ -5,7 +5,7 @@ import pytest
 DEMO_CSV_FIXTURES = {
     "invoice": (
         "id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status\n"
-        "inv_internal_1,src_inv_1,INV-001,contact_123,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN\n"
+        "inv_internal_1,src_inv_1,INV-001,contact_internal_1,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN\n"
     ),
     "contact": (
         "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
@@ -53,7 +53,7 @@ def test_demo_runner_uses_seeded_dataset_and_persists_run_state(tmp_path: Path) 
 
     assert result.status == "succeeded"
     assert (tmp_path / "runs" / "run-seeded" / "run_state.json").is_file()
-    assert set(result.tables) == {"invoice", "contact", "customer"}
+    assert set(result.tables.keys()) == {"invoice", "contact", "customer"}
 
 
 def test_demo_runner_accepts_explicit_overrides(tmp_path: Path) -> None:
