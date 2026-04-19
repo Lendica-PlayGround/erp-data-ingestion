@@ -43,6 +43,7 @@
 ## Session notes
 
 ### Durable context
+
 - `memory.md` is the canonical file for durable agent workflow rules in this repo
 - `README.md` should stay concise and serve as the human-facing summary of project purpose and process
 - `docs/specs/` is the canonical location for feature specs
@@ -51,8 +52,11 @@
 - Invoiced.com source format contract lives at `docs/sources/invoiced-data-format.md`
 - Simulated "raw dump" feeders live under `seeds/generators/<source>/` (one sub-package per source)
 - Convention for landing nested API fields into a flat sheet/CSV: top-level scalars as columns; nested objects/arrays as JSON strings in a `*_json` column (e.g. `items_json`, `metadata_json`)
+- Architecture direction: Supabase Postgres-first. Canonical operational tables are `mid_*` and `target_*`; old CSV sample fixtures remain historical examples only.
+- When discussion in chat intentionally diverges from the current written spec, explicitly call out the mismatch, explain whether docs/spec updates are needed, and surface that decision before proceeding as if the new direction is canonical.
 
 ### What was tried
+
 - 2026-04-18: Added root `README.md` and `memory.md`
 - 2026-04-18: Created a design spec for documentation and process rules in `docs/specs/2026-04-18-documentation-process-rules-design.md`
 - 2026-04-18: Created an implementation plan in `docs/superpowers/plans/2026-04-18-documentation-process-rules.md`

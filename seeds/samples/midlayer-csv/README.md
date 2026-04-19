@@ -1,11 +1,13 @@
-# `seeds/samples/midlayer-csv/` — worked example of the mid-layer bucket
+# `seeds/samples/midlayer-csv/` — historical worked example of the earlier CSV-first contract
 
-This directory is a **concrete, populated example** of what Phase 1's mapper emits
-into the `midlayer-csv` bucket (Supabase Storage in production; local mirror in
-dev). It exists to make the two authoritative docs real:
+This directory is a **historical, concrete example** of the earlier CSV-first
+mid-layer contract. The current architecture is Supabase Postgres-first for
+both `mid_*` and `target_*`, but these fixtures still help illustrate what a
+fully normalized set of records looks like.
 
-- **Schema:** `mira/midlayer-schema-guide/midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
-- **CSV contract:** `mira/midlayer-schema-guide/midlayer-csv-spec.md` (folder layout, file naming, sidecars, validation)
+- **Schema:** `midlayer-schema-guide/midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
+- **Database contract:** `midlayer-schema-guide/midlayer-db-spec.md` (table families, load metadata, validation)
+- **Mira implementation references:** `mira/midlayer-schema-guide/midlayer-schema-guide.md` and `mira/midlayer-schema-guide/midlayer-db-spec.md` mirror the same Supabase Postgres-first direction within the `mira/` subtree.
 
 ## What's here
 
@@ -60,13 +62,15 @@ samples/midlayer-csv/
 7. **Nested JSON cells (`addresses`, `email_addresses`, `phone_numbers`)** in
    the `contacts` table are minified JSON arrays of merge.dev sub-objects.
    In CSV, outer quoting uses `"`, inner quotes are doubled per RFC 4180.
-8. **Delta file is partitioned under `dt=YYYY-MM-DD/`** and named with the
-   Airflow/ULID `run_id`; the initial file has no `run_id` suffix by design
-   (there is exactly one per onboarding).
-9. **Sidecar `*.csv.meta.json`** accompanies every CSV with `row_count`,
-   `reject_count`, `sha256`, `mapping_version`, etc.
-10. **`_manifest/<date>.json`** is the Phase-3 trigger. It's emitted only after
-    the validation gate passes for all tables in that run.
+8. **These fixtures remain useful as normalized examples,** even though the
+   current production direction is to load equivalent rows into `mid_*` and
+   track batches in database tables instead of file manifests.
+9. **Sidecar metadata here is historical fixture metadata.** In the current
+   architecture, that role should be handled by load-batch and validation
+   tables in Supabase Postgres.
+10. **`_manifest/<date>.json` here is a historical trigger example.** In the
+    current architecture, downstream transitions should be driven by database
+    batch state instead.
 
 ## Regenerating
 

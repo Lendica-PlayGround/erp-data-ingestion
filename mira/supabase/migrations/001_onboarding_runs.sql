@@ -24,6 +24,7 @@ create table if not exists public.onboarding_run_state_history (
 create table if not exists public.mapping_versions (
   id bigserial primary key,
   run_id uuid not null references public.onboarding_runs (run_id) on delete cascade,
+  company_id text not null,
   mapping_version text not null,
   midlayer_schema_version text not null,
   contract jsonb not null,

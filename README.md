@@ -14,7 +14,7 @@ The current repository includes:
 
 The current project specs live in:
 - [`docs/0001-prd.md`](./docs/0001-prd.md)
-- [`docs/0002-phase1-midlayer-csv-contract.md`](./docs/0002-phase1-midlayer-csv-contract.md)
+- [`docs/0002-phase1-midlayer-db-contract.md`](./docs/0002-phase1-midlayer-db-contract.md)
 - [`docs/discussion/initial-discussion.md`](./docs/discussion/initial-discussion.md)
 
 For now, these documents are the source of truth for product direction and phase-one scope.
@@ -54,6 +54,7 @@ Phase 2–3 **Mira** is isolated under [`mira/`](./mira/):
 - `mira/agent/runtime/` — LangGraph graph, Telegram binding, CLI (`mira`), optional JWT dashboard.
 - `mira/framework/` — shared connector library; generated code lands in `mira/connectors/` or the run workspace.
 - `mira/schemas/midlayer/v1/` — canonical JSON Schema; `mira/schemas/mapping_contract/v1.schema.json` validates Phase 2.5 contracts.
-- `mira/supabase/migrations/` — `onboarding_runs` + state-transition trigger.
+- `mira/supabase/migrations/` — `onboarding_runs`, `mid_*`, `target_*`, and load-metadata SQL.
+- `mira/supabase/load_mid_from_mapper.py` — runs the generated handshake mapper and upserts the resulting mid CSV into Supabase Postgres.
 
 Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.
