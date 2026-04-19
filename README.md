@@ -111,3 +111,22 @@ from erp_data_ingestion.publish import Phase4Publisher
 
 publisher = Phase4Publisher.from_env()
 ```
+
+### 7. Run the Phase 4 demo dashboard
+
+1. Ensure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_S3_*`,
+   `CLICKHOUSE_*`, and `MIRA_JWT_SECRET` are set in `.env`.
+2. Start the dashboard:
+
+```bash
+PYTHONPATH=$PWD/src:$PWD/mira python -m agent.runtime.cli dashboard
+```
+
+3. Open the JWT-scoped Phase 4 page:
+
+```text
+http://127.0.0.1:8090/dashboard/phase4?token=<jwt>
+```
+
+4. Click `Start Phase 4 Demo` and verify Supabase artifact uploads and
+   ClickHouse events.
