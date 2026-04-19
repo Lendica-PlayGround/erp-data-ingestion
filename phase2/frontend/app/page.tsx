@@ -100,7 +100,7 @@ export default function Page() {
             onClick={() => void runHandshake()}
             disabled={handshakeBusy}
             title="Run Phase 2.5: AI column handshake (map) then generate Python mapper (codegen). Uses this session’s uploaded source files (csv/tsv/txt/json, any filenames) for codegen previews."
-            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-ink-950 hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-black/30 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {handshakeBusy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -139,6 +139,7 @@ export default function Page() {
             onRemoveUpload={removeUpload}
             changeToken={changeToken}
             commitToken={commitToken}
+            onArtifactsChanged={() => setChangeToken((t) => t + 1)}
           />
         </section>
       </main>
