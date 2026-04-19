@@ -129,3 +129,33 @@ def test_transformer_fails_fast_on_invalid_contact_rows(tmp_path) -> None:
         )
 
     assert not (tmp_path / "lake").exists()
+
+
+def test_transformer_writes_customer_csv_as_contact_shaped_parquet(tmp_path) -> None:
+    input_csv = tmp_path / "company_123_customer_initial_20260419_run-1.csv"
+    input_csv.write_text(
+        "\n".join(
+            [
+                "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company",
+                "customer_internal_1,src_customer_1,Acme Customer,billing@acme.test,true,false,ACTIVE,USD,company_123",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    transformer = Phase4Transformer(schema_version="customer.v1")
+
+    result = transformer.transform_midlayer_csv(
+        input_csv=input_csv,
+        output_root=tmp_path / "lake",
+        table="customer",
+        company_id="company_123",
+        sync_type="initial",
+        run_id="run-1",
+        logical_date=date(2026, 4, 19),
+    )
+
+    rows = pq.read_table(result.output_path).to_pylist()
+    assert rows[0]["name"] == "Acme Customer"
+    assert rows[0]["is_customer"] is True
+    assert result.table == "customer"
