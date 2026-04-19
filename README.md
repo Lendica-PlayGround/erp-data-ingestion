@@ -15,6 +15,7 @@ The current repository includes:
 The current project specs live in:
 - [`docs/0001-prd.md`](./docs/0001-prd.md)
 - [`docs/0002-phase1-midlayer-db-contract.md`](./docs/0002-phase1-midlayer-db-contract.md)
+- [`docs/0005-phase4-5-observability-validation.md`](./docs/0005-phase4-5-observability-validation.md)
 - [`docs/discussion/initial-discussion.md`](./docs/discussion/initial-discussion.md)
 
 For now, these documents are the source of truth for product direction and phase-one scope.
@@ -55,6 +56,18 @@ Phase 2–3 **Mira** is isolated under [`mira/`](./mira/):
 - `mira/framework/` — shared connector library; generated code lands in `mira/connectors/` or the run workspace.
 - `mira/schemas/midlayer/v1/` — canonical JSON Schema; `mira/schemas/mapping_contract/v1.schema.json` validates Phase 2.5 contracts.
 - `mira/supabase/migrations/` — `onboarding_runs`, `mid_*`, `target_*`, and load-metadata SQL.
-- `mira/supabase/load_mid_from_mapper.py` — runs the generated handshake mapper and upserts the resulting mid CSV into Supabase Postgres.
+- `mira/supabase/load_mid_from_mapper.py` — runs the generated handshake mapper, writes a validation report, uploads replay artifacts plus a manifest to Supabase Storage via the S3 endpoint, records batch metadata/run events, and upserts the resulting mid CSV into Supabase Postgres.
+- `mira/supabase/load_target_from_mid.py` — promotes `mid_*` rows into `target_*` tables using the current relational transform contract.
+
+## Current Phase 4/5 Slice
+
+The first Phase 4/5 runtime slice is now implemented:
+
+- [`.env.example`](./.env.example) documents the ClickHouse and Supabase Storage env contract.
+- [`mira/framework/csv_writer.py`](./mira/framework/csv_writer.py) builds replay-oriented artifact manifests with checksums and storage keys.
+- [`mira/framework/observability.py`](./mira/framework/observability.py) shapes normalized run-event payloads and publishes loader events into ClickHouse.
+- [`mira/supabase/load_mid_from_mapper.py`](./mira/supabase/load_mid_from_mapper.py) now requires `MIRA_RUN_ID`, uploads raw/mapped/validation artifacts to Supabase Storage, persists manifest metadata into `ingestion_load_batches.metadata`, emits a `run_events` record to ClickHouse, and fails closed when any validation failure is present.
+- [`mira/supabase/load_target_from_mid.py`](./mira/supabase/load_target_from_mid.py) promotes `mid_*` rows into `target_*` tables so the current repo has a runnable mid-to-target path.
+- [`docs/0005-phase4-5-observability-validation.md`](./docs/0005-phase4-5-observability-validation.md) is the implementation-ready spec for the remaining Phase 4/5 work.
 
 Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from psycopg import sql
+from psycopg.types.json import Jsonb
 
 
 MID_TABLE_COLUMNS: dict[str, list[str]] = {
@@ -87,6 +88,23 @@ BOOLEAN_FIELDS: dict[str, set[str]] = {
     "invoices": {"remote_was_deleted"},
 }
 
+DEFAULT_VALUES: dict[str, dict[str, Any]] = {
+    "customers": {
+        "is_supplier": False,
+        "is_customer": True,
+        "remote_was_deleted": False,
+        "_unmapped": {},
+    },
+    "contacts": {
+        "remote_was_deleted": False,
+        "_unmapped": {},
+    },
+    "invoices": {
+        "remote_was_deleted": False,
+        "_unmapped": {},
+    },
+}
+
 JSON_FIELDS: dict[str, set[str]] = {
     "customers": {"_unmapped"},
     "contacts": {"_unmapped"},
@@ -149,7 +167,7 @@ def parse_mid_row(mid_table: str, row: dict[str, str]) -> dict[str, Any]:
         raw_value = row.get(column, "")
         value = raw_value.strip() if isinstance(raw_value, str) else raw_value
         if value == "":
-            parsed[column] = {} if column in JSON_FIELDS[mid_table] else None
+            parsed[column] = DEFAULT_VALUES[mid_table].get(column)
             continue
 
         if column in BOOLEAN_FIELDS[mid_table]:
@@ -206,6 +224,7 @@ def batch_context(
 
 
 def create_load_batch(cur, context: dict[str, Any]) -> int:
+    params = {**context, "metadata": Jsonb(context["metadata"])}
     cur.execute(
         """
         insert into public.ingestion_load_batches (
@@ -234,7 +253,7 @@ def create_load_batch(cur, context: dict[str, Any]) -> int:
         )
         returning id
         """,
-        context,
+        params,
     )
     return cur.fetchone()[0]
 
@@ -290,7 +309,7 @@ def log_validation_failure(
             "row_hash": row_hash,
             "error_code": error_code,
             "error_message": error_message,
-            "raw_row": raw_row,
+            "raw_row": Jsonb(raw_row),
         },
     )
 
@@ -328,6 +347,9 @@ def upsert_mid_rows(cur, mid_table: str, load_batch_id: int, rows: list[dict[str
     updated = 0
     for row in rows:
         params = {"load_batch_id": load_batch_id, **row}
+        for column in JSON_FIELDS[mid_table]:
+            if column in params and params[column] is not None:
+                params[column] = Jsonb(params[column])
         cur.execute(query, params)
         was_inserted = cur.fetchone()[0]
         if was_inserted:
@@ -345,7 +367,9 @@ def complete_load_batch(
     inserted_count: int,
     updated_count: int,
     failed_count: int,
+    metadata: dict[str, Any] | None = None,
 ) -> None:
+    metadata_patch = Jsonb(metadata or {})
     cur.execute(
         """
         update public.ingestion_load_batches
@@ -354,6 +378,7 @@ def complete_load_batch(
           inserted_count = %(inserted_count)s,
           updated_count = %(updated_count)s,
           failed_count = %(failed_count)s,
+          metadata = coalesce(metadata, '{}'::jsonb) || %(metadata)s,
           completed_at = now()
         where id = %(load_batch_id)s
         """,
@@ -362,6 +387,7 @@ def complete_load_batch(
             "inserted_count": inserted_count,
             "updated_count": updated_count,
             "failed_count": failed_count,
+            "metadata": metadata_patch,
             "load_batch_id": load_batch_id,
         },
     )

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
-from framework.mid_db_loader import parse_mid_row, target_mid_table
+from framework.mid_db_loader import complete_load_batch, parse_mid_row, target_mid_table
+from psycopg.types.json import Jsonb
 
 
 def test_target_mid_table_names():
@@ -78,3 +79,32 @@ def test_parse_invoice_row_converts_decimals_and_nulls():
     assert parsed["total_amount"] == Decimal("108.2500")
     assert parsed["paid_on_date"] is None
     assert parsed["_unmapped"] == {}
+
+
+def test_complete_load_batch_can_store_metadata_patch():
+    class FakeCursor:
+        def __init__(self) -> None:
+            self.calls: list[tuple[str, dict[str, object]]] = []
+
+        def execute(self, query, params) -> None:
+            self.calls.append((str(query), params))
+
+    cur = FakeCursor()
+
+    complete_load_batch(
+        cur,
+        load_batch_id=7,
+        status="completed",
+        inserted_count=2,
+        updated_count=1,
+        failed_count=0,
+        metadata={
+            "artifact_manifest": {"artifact_prefix": "company_id=acme/run_id=run-123/batch_id=7"},
+            "run_events": [{"event_type": "load_batch_completed"}],
+        },
+    )
+
+    _, params = cur.calls[0]
+    assert params["load_batch_id"] == 7
+    assert params["metadata"] is not None
+    assert isinstance(params["metadata"], Jsonb)
