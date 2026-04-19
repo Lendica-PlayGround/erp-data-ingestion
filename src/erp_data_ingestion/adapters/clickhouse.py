@@ -79,6 +79,28 @@ class ClickHouseTelemetrySink:
             column_names=["event_name", "occurred_at", "attributes_json"],
         )
 
+    def list_events(self, *, run_id: str, limit: int = 25) -> list[dict[str, Any]]:
+        result = self.client.query(
+            """
+            SELECT event_name, occurred_at, attributes_json
+            FROM phase4_telemetry_events
+            WHERE JSONExtractString(attributes_json, 'run_id') = %(run_id)s
+            ORDER BY occurred_at DESC
+            LIMIT %(limit)s
+            """,
+            parameters={"run_id": run_id, "limit": limit},
+        )
+        rows: list[dict[str, Any]] = []
+        for event_name, occurred_at, attributes_json in result.result_rows:
+            rows.append(
+                {
+                    "event_name": event_name,
+                    "occurred_at": str(occurred_at),
+                    "attributes": json.loads(attributes_json),
+                }
+            )
+        return rows
+
     @classmethod
     def from_env(cls, client: Any | None = None) -> "ClickHouseTelemetrySink":
         raw_host = os.getenv("CLICKHOUSE_HOST")
