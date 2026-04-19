@@ -1,26 +1,42 @@
 from pathlib import Path
 
-from erp_data_ingestion.phase4_demo import Phase4DemoRequest, Phase4DemoRunner
+import pytest
+
+DEMO_CSV_FIXTURES = {
+    "invoice": (
+        "id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status\n"
+        "inv_internal_1,src_inv_1,INV-001,contact_123,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN\n"
+    ),
+    "contact": (
+        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
+        "contact_internal_1,src_contact_1,Acme Contact,billing@acme.test,true,false,ACTIVE,USD,company_123\n"
+    ),
+    "customer": (
+        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
+        "customer_internal_1,src_customer_1,Acme Customer,customer@acme.test,true,false,ACTIVE,USD,company_123\n"
+    ),
+}
+
+
+def _load_phase4_demo_runner():
+    try:
+        from erp_data_ingestion.phase4_demo import Phase4DemoRequest, Phase4DemoRunner
+    except ModuleNotFoundError as exc:
+        pytest.fail(f"phase4_demo module missing: {exc.name}")
+    return Phase4DemoRequest, Phase4DemoRunner
+
+
+def _write_demo_csv(path: Path, name: str) -> None:
+    path.write_text(DEMO_CSV_FIXTURES[name], encoding="utf-8")
 
 
 def test_demo_runner_uses_seeded_dataset_and_persists_run_state(tmp_path: Path) -> None:
     seed_root = tmp_path / "seeds"
     seed_root.mkdir()
-    (seed_root / "invoice.csv").write_text(
-        "id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status\n"
-        "inv_internal_1,src_inv_1,INV-001,contact_123,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN\n",
-        encoding="utf-8",
-    )
-    (seed_root / "contact.csv").write_text(
-        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
-        "contact_internal_1,src_contact_1,Acme Contact,billing@acme.test,true,false,ACTIVE,USD,company_123\n",
-        encoding="utf-8",
-    )
-    (seed_root / "customer.csv").write_text(
-        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
-        "customer_internal_1,src_customer_1,Acme Customer,customer@acme.test,true,false,ACTIVE,USD,company_123\n",
-        encoding="utf-8",
-    )
+    for name in DEMO_CSV_FIXTURES:
+        _write_demo_csv(seed_root / f"{name}.csv", name)
+
+    Phase4DemoRequest, Phase4DemoRunner = _load_phase4_demo_runner()
     runner = Phase4DemoRunner(output_root=tmp_path / "runs")
 
     result = runner.run(
@@ -42,22 +58,14 @@ def test_demo_runner_accepts_explicit_overrides(tmp_path: Path) -> None:
     invoice_csv = tmp_path / "invoice.csv"
     contact_csv = tmp_path / "contact.csv"
     customer_csv = tmp_path / "customer.csv"
-    invoice_csv.write_text(
-        "id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status\n"
-        "inv_internal_1,src_inv_1,INV-001,contact_123,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN\n",
-        encoding="utf-8",
-    )
-    contact_csv.write_text(
-        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
-        "contact_internal_1,src_contact_1,Acme Contact,billing@acme.test,true,false,ACTIVE,USD,company_123\n",
-        encoding="utf-8",
-    )
-    customer_csv.write_text(
-        "id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company\n"
-        "customer_internal_1,src_customer_1,Acme Customer,customer@acme.test,true,false,ACTIVE,USD,company_123\n",
-        encoding="utf-8",
-    )
+    for path, name in (
+        (invoice_csv, "invoice"),
+        (contact_csv, "contact"),
+        (customer_csv, "customer"),
+    ):
+        _write_demo_csv(path, name)
 
+    Phase4DemoRequest, Phase4DemoRunner = _load_phase4_demo_runner()
     runner = Phase4DemoRunner(output_root=tmp_path / "runs")
     result = runner.run(
         Phase4DemoRequest(
