@@ -1,16 +1,20 @@
 # Customers
 
 ## Summary
-This table contains information about customers of Acme Co., including their contact details, status, and currency preferences.
+Customer master data synchronized from Invoiced.com for Div’s Furniture Manufacturing Co. Represents organizations and people that purchase furniture and receive invoices.
 
 ## Row meaning
-Each row represents a unique customer.
+Each row represents a single customer account in Invoiced (company or person), including billing profile, credit settings, tax configuration, and statement URLs.
 
 ## Relationships
-This table can be linked to invoices or other transaction tables using the `external_id` as a foreign key.
+- `id` links to `contacts.customer` (customer-to-contact = 1-to-many).
+- `id` links to `invoices.customer` (customer-to-invoice = 1-to-many).
+- `parent_customer` can reference another `customers.id` for hierarchical customer structures.
 
 ## Datasource
-Filename: uploads/acme-co_customers_initial_20260418.csv
+- File: `Div_s_Furniture_Manufacturing_Co.xlsx`
+- Sheet: `customers`
+- Upstream system noted in `meta` sheet as Invoiced.com.
 
 ## Retrieval process
-This dataset is retrieved from a CSV file. There are no specific pagination or filtering mechanisms as it is a static file.
+In the Excel context this is a static extract. In the source Invoiced API this would typically come from a `GET /customers` endpoint with cursor or page-based pagination, filterable by `updated_at` for incremental loads. For this workbook, ingestion is a full refresh of the `customers` sheet on each pull.

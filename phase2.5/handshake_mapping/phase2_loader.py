@@ -28,7 +28,14 @@ def discover_tables(phase2_output: Path) -> List["Phase2Table"]:
         cj = sub / "columns.json"
         if not cj.is_file():
             continue
-        raw = json.loads(cj.read_text(encoding="utf-8"))
+        text = cj.read_text(encoding="utf-8")
+        try:
+            raw = json.loads(text)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Invalid JSON in {cj}: {e}. "
+                "Regex patterns in JSON strings must escape backslashes (e.g. \\\\w for \\w)."
+            ) from e
         desc_path = sub / "description.md"
         desc = desc_path.read_text(encoding="utf-8") if desc_path.is_file() else None
         slug = str(raw.get("table") or sub.name)

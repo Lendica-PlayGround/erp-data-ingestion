@@ -7,7 +7,12 @@ import { ArtifactViewer } from "./ArtifactViewer";
 import { CommitHistory } from "./CommitHistory";
 import type { ArtifactFile, CommitSummary, UploadedFile } from "@/lib/types";
 import { Loader2, X } from "lucide-react";
-import { applyHandshakeMapper, listArtifacts, listCommits } from "@/lib/api";
+import {
+  applyHandshakeMapper,
+  listArtifacts,
+  listCommits,
+  listHandshakeArtifacts,
+} from "@/lib/api";
 
 type Tab = "files" | "handshake" | "commits" | "uploads";
 
@@ -33,8 +38,10 @@ export function WorkspacePanel({
 }: Props) {
   const [tab, setTab] = useState<Tab>("files");
   const [files, setFiles] = useState<ArtifactFile[]>([]);
+  const [handshakeArtifacts, setHandshakeArtifacts] = useState<ArtifactFile[]>([]);
   const [commits, setCommits] = useState<CommitSummary[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [fileSelected, setFileSelected] = useState<string | null>(null);
+  const [handshakeSelected, setHandshakeSelected] = useState<string | null>(null);
   const [recent, setRecent] = useState<Set<string>>(new Set());
   const [viewerKey, setViewerKey] = useState(0);
   const [applyBusy, setApplyBusy] = useState(false);
@@ -43,18 +50,17 @@ export function WorkspacePanel({
   const [uploadViewerKey, setUploadViewerKey] = useState(0);
   const eventsAbortRef = useRef<AbortController | null>(null);
 
-  const handshakeFiles = files.filter((f) => f.path.startsWith("handshake/"));
-
-  const handshakeViewPath =
-    handshakeFiles.length === 0
-      ? null
-      : handshakeFiles.some((f) => f.path === selected)
-        ? selected
-        : handshakeFiles[0].path;
-
   const refreshFiles = useCallback(async () => {
     try {
       setFiles(await listArtifacts());
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const refreshHandshake = useCallback(async () => {
+    try {
+      setHandshakeArtifacts(await listHandshakeArtifacts());
     } catch (err) {
       console.error(err);
     }
@@ -70,13 +76,15 @@ export function WorkspacePanel({
 
   useEffect(() => {
     refreshFiles();
+    refreshHandshake();
     refreshCommits();
-  }, [refreshFiles, refreshCommits]);
+  }, [refreshFiles, refreshHandshake, refreshCommits]);
 
   useEffect(() => {
     refreshFiles();
+    refreshHandshake();
     setViewerKey((k) => k + 1);
-  }, [changeToken, refreshFiles]);
+  }, [changeToken, refreshFiles, refreshHandshake]);
 
   useEffect(() => {
     if (uploads.length === 0) {
@@ -89,6 +97,17 @@ export function WorkspacePanel({
     });
     setUploadViewerKey((k) => k + 1);
   }, [uploads]);
+
+  useEffect(() => {
+    if (handshakeArtifacts.length === 0) {
+      setHandshakeSelected(null);
+      return;
+    }
+    setHandshakeSelected((prev) => {
+      if (prev && handshakeArtifacts.some((f) => f.path === prev)) return prev;
+      return handshakeArtifacts[0].path;
+    });
+  }, [handshakeArtifacts]);
 
   useEffect(() => {
     refreshCommits();
@@ -136,7 +155,7 @@ export function WorkspacePanel({
                   });
                 }, RECENT_MS);
                 refreshFiles();
-                if (selected && p === selected) setViewerKey((k) => k + 1);
+                if (fileSelected && p === fileSelected) setViewerKey((k) => k + 1);
               }
             } catch {
               // ignore
@@ -148,7 +167,7 @@ export function WorkspacePanel({
       }
     })();
     return () => ac.abort();
-  }, [refreshFiles, selected]);
+  }, [refreshFiles, fileSelected]);
 
   const runApplyMapper = useCallback(async () => {
     if (applyBusy) return;
@@ -156,27 +175,38 @@ export function WorkspacePanel({
     try {
       const r = await applyHandshakeMapper(sessionId);
       await refreshFiles();
+      await refreshHandshake();
       onArtifactsChanged?.();
       setViewerKey((k) => k + 1);
       if (r.outputs.length > 0) {
-        setSelected(r.outputs[r.outputs.length - 1]);
+        setHandshakeSelected(r.outputs[r.outputs.length - 1]);
       }
       if (!r.ok) {
         const bad = r.steps.find((s) => !s.ok);
         const err = bad?.stderr?.slice(0, 3000) ?? "";
-        alert(
-          `Mapper finished with errors.\n\n${bad ? `${bad.table} (exit ${bad.returncode})\n${err}` : "No table ran successfully."}`,
-        );
+        if (r.steps.length === 0 && r.skipped.length > 0) {
+          const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
+          alert(
+            `No input was found for any table.\n\n` +
+              `Upload CSVs (e.g. customers.csv) or an .xlsx whose sheet names match each table ` +
+              `(customers, invoices, …), or remove uploads to use repo samples under phase2/output/tables/.\n\n` +
+              `Skipped:\n${lines}`,
+          );
+        } else {
+          alert(
+            `Mapper finished with errors.\n\n${bad ? `${bad.table} (exit ${bad.returncode})\n${err}` : "No table ran successfully."}`,
+          );
+        }
       } else if (r.skipped.length > 0) {
         const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
-        alert(`Preview written for ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
+        alert(`Mapped ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
       }
     } catch (e) {
       alert("Apply mapper failed: " + (e as Error).message);
     } finally {
       setApplyBusy(false);
     }
-  }, [applyBusy, sessionId, refreshFiles, onArtifactsChanged]);
+  }, [applyBusy, sessionId, refreshFiles, refreshHandshake, onArtifactsChanged]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -199,9 +229,9 @@ export function WorkspacePanel({
                 {files.length}
               </span>
             )}
-            {t === "handshake" && handshakeFiles.length > 0 && (
+            {t === "handshake" && handshakeArtifacts.length > 0 && (
               <span className="ml-1.5 rounded-full bg-ink-700 px-1.5 py-0.5 text-[10px] text-ink-200">
-                {handshakeFiles.length}
+                {handshakeArtifacts.length}
               </span>
             )}
             {t === "commits" && commits.length > 0 && (
@@ -227,13 +257,13 @@ export function WorkspacePanel({
             <div className="border-r border-ink-700 min-h-0 overflow-hidden">
               <ArtifactTree
                 files={files}
-                selected={selected}
+                selected={fileSelected}
                 recent={recent}
-                onSelect={setSelected}
+                onSelect={setFileSelected}
               />
             </div>
             <div className="min-h-0 overflow-hidden">
-              <ArtifactViewer path={selected} refreshKey={viewerKey} />
+              <ArtifactViewer path={fileSelected} refreshKey={viewerKey} />
             </div>
           </div>
         )}
@@ -244,40 +274,44 @@ export function WorkspacePanel({
                 type="button"
                 onClick={() => void runApplyMapper()}
                 disabled={applyBusy}
-                title="Run handshake_run_mapper.py for each table: uses session uploads (e.g. contacts.csv) or output/tables/&lt;slug&gt;/*.csv, writes mid-layer CSVs under handshake/preview/"
+                title="Runs the generated mapper on session uploads: CSV/TSV by file name, or Excel (.xlsx) by worksheet name (e.g. tabs «customers», «invoices»). If there are no uploads, uses sample CSVs under phase2/output/tables/. Output: phase2.5/output/mapped/"
                 className="inline-flex items-center gap-1.5 rounded-md bg-ink-700 px-3 py-1.5 text-xs font-medium text-ink-50 hover:bg-ink-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {applyBusy ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                 ) : null}
-                {applyBusy ? "Applying mapper…" : "Apply mapper & preview"}
+                {applyBusy ? "Running mapper…" : "Run mapper on uploads"}
               </button>
               <span className="text-[11px] leading-snug text-ink-500">
-                Converts uploads to internal (mid-layer) CSVs in{" "}
-                <span className="font-mono text-ink-400">handshake/preview/</span>. Name files like{" "}
-                <span className="font-mono">contacts.csv</span>, <span className="font-mono">invoices.csv</span>.
+                Runs <span className="font-mono text-ink-400">handshake_run_mapper.py</span> on your data and
+                writes mid-layer CSVs under{" "}
+                <span className="font-mono text-ink-400">phase2.5/output/mapped/</span>. Use{" "}
+                <span className="font-mono">customers.csv</span> or an Excel tab named{" "}
+                <span className="font-mono">customers</span> / <span className="font-mono">invoices</span> (sheet
+                names are matched to each table). Run handshake only generates the mapper; this button executes it.
               </span>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(180px,280px)_1fr]">
               <div className="min-h-0 overflow-hidden border-r border-ink-700">
-                {handshakeFiles.length === 0 ? (
+                {handshakeArtifacts.length === 0 ? (
                   <div className="flex h-full items-center justify-center p-6 text-center text-sm text-ink-400">
                     No Phase 2.5 handshake files yet. Use <strong className="text-ink-200">Run handshake</strong>{" "}
-                    in the header (map + codegen). Artifacts appear here as{" "}
-                    <span className="font-mono text-ink-300">handshake_mapping.json</span> and{" "}
-                    <span className="font-mono text-ink-300">handshake_run_mapper.py</span>.
+                    in the header (map + codegen). Files live under{" "}
+                    <span className="font-mono text-ink-300">phase2.5/output/</span> (e.g.{" "}
+                    <span className="font-mono text-ink-300">handshake_mapping.json</span>,{" "}
+                    <span className="font-mono text-ink-300">handshake_run_mapper.py</span>).
                   </div>
                 ) : (
                   <ArtifactTree
-                    files={handshakeFiles}
-                    selected={handshakeViewPath}
+                    files={handshakeArtifacts}
+                    selected={handshakeSelected}
                     recent={recent}
-                    onSelect={setSelected}
+                    onSelect={setHandshakeSelected}
                   />
                 )}
               </div>
               <div className="min-h-0 overflow-hidden">
-                <ArtifactViewer path={handshakeViewPath} refreshKey={viewerKey} />
+                <ArtifactViewer path={handshakeSelected} refreshKey={viewerKey} handshake />
               </div>
             </div>
           </div>

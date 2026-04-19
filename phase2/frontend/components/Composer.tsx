@@ -163,7 +163,7 @@ export function Composer({
           type="file"
           className="hidden"
           multiple
-          accept=".csv,.json,.md,.txt,.pdf,.tsv,.yaml,.yml,.xlsx"
+          accept=".csv,.json,.md,.txt,.pdf,.tsv,.yaml,.yml,.xlsx,.xlsm"
           onChange={(e) => handleFiles(e.target.files)}
         />
         <textarea
