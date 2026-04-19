@@ -1,0 +1,14 @@
+{
+  "schema_version": "v1",
+  "table": "invoices",
+  "company_id": "acme-co",
+  "source_system": "stripe",
+  "sync_type": "delta",
+  "run_id": "01HWXK9A2Z8F3Q4B7N5M6P1R2S",
+  "source_run_id": "airflow:stripe_invoices_delta__2026-04-19",
+  "mapping_version": "stripe.invoice@0.1.0",
+  "generated_at": "2026-04-19T08:00:15Z",
+  "row_count": 1,
+  "reject_count": 0,
+  "sha256": "sha-invoices-delta"
+}

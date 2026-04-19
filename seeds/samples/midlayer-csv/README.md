@@ -77,3 +77,7 @@ samples/midlayer-csv/
 These files are hand-curated fixtures — checksums and `_row_hash` values are
 illustrative, not computed. The real mapper (Phase 3) will regenerate this
 exact layout with real hashes during a run.
+
+These files are now committed as runnable demo fixtures for the Phase 4 dashboard
+flow. They intentionally mirror the documented Phase 1 contract closely enough for
+the Phase 4 demo runner to ingest them directly without a Phase 3 dependency.
