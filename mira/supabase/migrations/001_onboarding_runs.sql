@@ -29,7 +29,7 @@ create table if not exists public.mapping_versions (
   midlayer_schema_version text not null,
   contract jsonb not null,
   created_at timestamptz not null default now(),
-  unique (mapping_version, company_id)
+  unique (mapping_version, run_id)
 );
 
 -- Legal state edges (subset enforced; full preconditions live in app + mapping validation).
