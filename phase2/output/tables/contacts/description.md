@@ -1,16 +1,18 @@
 # Contacts
 
 ## Summary
-The Contacts table contains detailed contact information for each customer of Div's Furniture Manufacturing Co. This includes names, titles, emails, phone numbers, and addresses.
+Customer contact records synchronized from Invoiced.com. Represents individual people associated with customer accounts for billing, finance, procurement, and operations.
 
 ## Row meaning
-Each row represents a unique contact associated with a customer.
+Each row represents a single contact person tied to a customer, including role, communication details, and address.
 
 ## Relationships
-This table is related to the Customers table through the `customer` field, which links contacts to their respective customers.
+- `customer` is a foreign key to `customers.id` (customer-to-contact = 1-to-many).
 
 ## Datasource
-Extracted from the `contacts` sheet of the uploaded Excel file `Div_s_Furniture_Manufacturing_Co.xlsx`.
+- File: `Div_s_Furniture_Manufacturing_Co.xlsx`
+- Sheet: `contacts`
+- Upstream system noted in `meta` sheet as Invoiced.com.
 
 ## Retrieval process
-This data is part of the Excel file and can be accessed by reading the `contacts` sheet.
+In the Excel context this is a static extract. In the source Invoiced API this would typically come from a `GET /contacts` or `GET /customers/{id}/contacts` endpoint with pagination and `updated_at` for incrementals. For this workbook, ingestion is a full refresh of the `contacts` sheet on each pull.

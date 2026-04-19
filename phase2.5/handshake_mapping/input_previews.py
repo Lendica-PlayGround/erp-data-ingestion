@@ -58,7 +58,7 @@ def preview_xlsx(
     finally:
         wb.close()
     out = "\n".join(parts).rstrip()
-    _MAX_PREVIEW_CHARS = 28_000
+    _MAX_PREVIEW_CHARS = 12_000
     if len(out) > _MAX_PREVIEW_CHARS:
         return out[:_MAX_PREVIEW_CHARS] + "\n... [total spreadsheet preview truncated for API size] ..."
     return out
@@ -94,7 +94,8 @@ def preview_path(path: Path) -> str:
     return preview_text(path, max_chars=8000)
 
 
-def build_inputs_section(paths: list[Path]) -> str:
+def build_inputs_section(paths: list[Path], *, max_total_chars: int = 14_000) -> str:
+    """Cap total preview size so codegen stays under OpenAI TPM limits."""
     parts: list[str] = []
     for p in paths:
         rp = p.resolve()
@@ -107,7 +108,13 @@ def build_inputs_section(paths: list[Path]) -> str:
             parts.append(f"## {rp}\n<error: {e}>\n")
             continue
         parts.append(f"## {rp}\n```\n{body}\n```\n")
-    return "\n".join(parts) if parts else "(no input files provided)\n"
+    out = "\n".join(parts) if parts else "(no input files provided)\n"
+    if len(out) > max_total_chars:
+        return (
+            out[:max_total_chars]
+            + "\n... [input previews truncated: too many/large uploads for one codegen request] ..."
+        )
+    return out
 
 
 def phase2_columns_snippets(phase2_output: Path, table_slugs: list[str]) -> str:
@@ -121,7 +128,7 @@ def phase2_columns_snippets(phase2_output: Path, table_slugs: list[str]) -> str:
             continue
         try:
             data = json.loads(cj.read_text(encoding="utf-8"))
-            parts.append(f"### {slug}\n```json\n{json.dumps(data, indent=2)[:12000]}\n```\n")
+            parts.append(f"### {slug}\n```json\n{json.dumps(data, indent=2)[:5000]}\n```\n")
         except (OSError, json.JSONDecodeError) as e:
             parts.append(f"### {slug}\n<error reading columns.json: {e}>\n")
     return "\n".join(parts)

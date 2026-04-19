@@ -184,9 +184,19 @@ export function WorkspacePanel({
       if (!r.ok) {
         const bad = r.steps.find((s) => !s.ok);
         const err = bad?.stderr?.slice(0, 3000) ?? "";
-        alert(
-          `Mapper finished with errors.\n\n${bad ? `${bad.table} (exit ${bad.returncode})\n${err}` : "No table ran successfully."}`,
-        );
+        if (r.steps.length === 0 && r.skipped.length > 0) {
+          const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
+          alert(
+            `No input CSV was found for any table.\n\n` +
+                `Add CSV/TSV/txt under uploads for this session (name files like contacts.csv / customers.csv), ` +
+              `or remove uploads to use repo samples under phase2/output/tables/<phase2_table>/.\n\n` +
+              `Skipped:\n${lines}`,
+          );
+        } else {
+          alert(
+            `Mapper finished with errors.\n\n${bad ? `${bad.table} (exit ${bad.returncode})\n${err}` : "No table ran successfully."}`,
+          );
+        }
       } else if (r.skipped.length > 0) {
         const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
         alert(`Preview written for ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
@@ -264,18 +274,20 @@ export function WorkspacePanel({
                 type="button"
                 onClick={() => void runApplyMapper()}
                 disabled={applyBusy}
-                title="Run handshake_run_mapper.py for each table: uses session uploads (e.g. contacts.csv) or phase2/output/tables/&lt;slug&gt;/*.csv, writes previews under phase2.5/output/preview/"
+                title="Runs the generated Python mapper on your session CSV uploads (matched by table name). If you have no uploads, uses sample CSVs under phase2/output/tables/. Output: phase2.5/output/mapped/"
                 className="inline-flex items-center gap-1.5 rounded-md bg-ink-700 px-3 py-1.5 text-xs font-medium text-ink-50 hover:bg-ink-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {applyBusy ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                 ) : null}
-                {applyBusy ? "Applying mapper…" : "Apply mapper & preview"}
+                {applyBusy ? "Running mapper…" : "Run mapper on uploads"}
               </button>
               <span className="text-[11px] leading-snug text-ink-500">
-                Converts uploads to internal (mid-layer) CSVs under{" "}
-                <span className="font-mono text-ink-400">phase2.5/output/preview/</span>. Name files like{" "}
-                <span className="font-mono">contacts.csv</span>, <span className="font-mono">invoices.csv</span>.
+                Executes <span className="font-mono text-ink-400">handshake_run_mapper.py</span> on your
+                CSVs and writes mid-layer CSVs under{" "}
+                <span className="font-mono text-ink-400">phase2.5/output/mapped/</span>. Name uploads like{" "}
+                <span className="font-mono">contacts.csv</span> / <span className="font-mono">customers.csv</span>{" "}
+                so they match each table (header: Run handshake only builds the mapper; this button runs it).
               </span>
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(180px,280px)_1fr]">

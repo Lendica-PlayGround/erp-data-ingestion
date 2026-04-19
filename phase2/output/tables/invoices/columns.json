@@ -1,236 +1,38 @@
 {
   "table": "invoices",
   "columns": [
-    {
-      "name": "id",
-      "datatype": "integer",
-      "domain": {"kind": "range", "min": 40000, "max": null, "missing": "null"},
-      "unit": {"kind": "identifier"},
-      "description": "Internal numeric identifier for the invoice in Invoiced.com."
-    },
-    {
-      "name": "object",
-      "datatype": "string",
-      "domain": {"kind": "categories", "values": ["invoice"], "missing": "empty_string"},
-      "unit": {"kind": "category"},
-      "description": "API object type; always 'invoice' for this sheet."
-    },
-    {
-      "name": "customer",
-      "datatype": "integer",
-      "domain": {"kind": "range", "min": 10000, "max": null, "missing": "null"},
-      "unit": {"kind": "identifier"},
-      "description": "Foreign key referencing the customer record (customers.id) that this invoice is billed to."
-    },
-    {
-      "name": "name",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "Optional display name or title for the invoice; often blank in this export."
-    },
-    {
-      "name": "number",
-      "datatype": "string",
-      "domain": {"kind": "regex", "pattern": "^INV-[0-9]+$", "missing": "empty_string"},
-      "unit": {"kind": "identifier"},
-      "description": "Human-readable invoice number shown to the customer (e.g., 'INV-0016')."
-    },
-    {
-      "name": "autopay",
-      "datatype": "boolean",
-      "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"},
-      "unit": {"kind": "category"},
-      "description": "Indicates whether this invoice is enrolled in automatic payment collection."
-    },
-    {
-      "name": "currency",
-      "datatype": "string",
-      "domain": {"kind": "categories", "values": ["usd", "cad", "eur"], "missing": "empty_string"},
-      "unit": {"kind": "currency"},
-      "description": "ISO currency code for the invoice amounts."
-    },
-    {
-      "name": "draft",
-      "datatype": "boolean",
-      "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"},
-      "unit": {"kind": "category"},
-      "description": "Whether the invoice is still in draft state (not yet issued)."
-    },
-    {
-      "name": "closed",
-      "datatype": "boolean",
-      "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"},
-      "unit": {"kind": "category"},
-      "description": "Whether the invoice has been closed in the billing system."
-    },
-    {
-      "name": "paid",
-      "datatype": "boolean",
-      "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"},
-      "unit": {"kind": "category"},
-      "description": "Whether the invoice has been fully paid."
-    },
-    {
-      "name": "status",
-      "datatype": "string",
-      "domain": {"kind": "categories", "values": ["paid", "voided", "past_due", "not_sent", "sent"], "missing": "empty_string"},
-      "unit": {"kind": "category"},
-      "description": "High-level invoice status (e.g., paid, voided)."
-    },
-    {
-      "name": "attempt_count",
-      "datatype": "integer",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "count"},
-      "description": "Number of payment collection attempts made for this invoice."
-    },
-    {
-      "name": "next_payment_attempt",
-      "datatype": "datetime",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "empty_string"},
-      "unit": {"kind": "datetime"},
-      "description": "Unix timestamp (seconds since epoch) for the next scheduled automatic payment attempt, if any."
-    },
-    {
-      "name": "subscription",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "identifier"},
-      "description": "Identifier of the related subscription, when the invoice is generated from a subscription; blank for one-off invoices."
-    },
-    {
-      "name": "date",
-      "datatype": "datetime",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "datetime"},
-      "description": "Invoice issue date as a Unix timestamp (seconds since epoch)."
-    },
-    {
-      "name": "due_date",
-      "datatype": "datetime",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "datetime"},
-      "description": "Invoice due date as a Unix timestamp (seconds since epoch)."
-    },
-    {
-      "name": "payment_terms",
-      "datatype": "string",
-      "domain": {"kind": "categories", "values": ["NET 7", "NET 14", "NET 30", "NET 60", "AutoPay"], "missing": "empty_string"},
-      "unit": {"kind": "category"},
-      "description": "Payment terms applied to the invoice (e.g., NET 60, AutoPay)."
-    },
-    {
-      "name": "purchase_order",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "identifier"},
-      "description": "Customer purchase order number associated with this invoice, if provided."
-    },
-    {
-      "name": "notes",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "Free-form internal or customer-facing notes on the invoice."
-    },
-    {
-      "name": "subtotal",
-      "datatype": "number",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "currency"},
-      "description": "Sum of line item amounts before discounts and taxes, in invoice currency."
-    },
-    {
-      "name": "total",
-      "datatype": "number",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "currency"},
-      "description": "Total amount of the invoice after discounts and taxes, in invoice currency."
-    },
-    {
-      "name": "balance",
-      "datatype": "number",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "currency"},
-      "description": "Outstanding balance remaining on the invoice. Zero for fully paid invoices."
-    },
-    {
-      "name": "payment_plan",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "identifier"},
-      "description": "Identifier of an associated payment plan, if the invoice is being paid in installments. Often blank."
-    },
-    {
-      "name": "url",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "Public URL to view the invoice in the Invoiced.com customer portal."
-    },
-    {
-      "name": "payment_url",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "Public URL where the customer can pay this invoice online."
-    },
-    {
-      "name": "pdf_url",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "Direct URL to download the invoice PDF."
-    },
-    {
-      "name": "created_at",
-      "datatype": "datetime",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "datetime"},
-      "description": "Unix timestamp when the invoice record was created in Invoiced.com."
-    },
-    {
-      "name": "updated_at",
-      "datatype": "datetime",
-      "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"},
-      "unit": {"kind": "datetime"},
-      "description": "Unix timestamp when the invoice record was last updated in Invoiced.com."
-    },
-    {
-      "name": "items_json",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "JSON-encoded array of line items on the invoice, including amounts, descriptions, and catalog references."
-    },
-    {
-      "name": "discounts_json",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "JSON-encoded array of discounts applied to the invoice. Often an empty array '[]'."
-    },
-    {
-      "name": "taxes_json",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "JSON-encoded array of tax lines applied to the invoice, including tax amounts and rates."
-    },
-    {
-      "name": "ship_to_json",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "JSON-encoded shipping address or shipping details for the invoice, when present."
-    },
-    {
-      "name": "metadata_json",
-      "datatype": "string",
-      "domain": {"kind": "text", "missing": "empty_string"},
-      "unit": {"kind": "text"},
-      "description": "JSON-encoded custom metadata key-value pairs attached to the invoice."
-    }
+    {"name": "id", "datatype": "integer", "domain": {"kind": "range", "min": 40000, "max": null, "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Internal numeric invoice ID from Invoiced; primary key for the invoice table."},
+    {"name": "object", "datatype": "string", "domain": {"kind": "categories", "values": ["invoice"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Discriminator for the record type; always 'invoice' for this sheet."},
+    {"name": "customer", "datatype": "integer", "domain": {"kind": "range", "min": 10000, "max": null, "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Foreign key referencing the billed customer (customers.id)."},
+    {"name": "name", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "text"}, "description": "Optional invoice title or summary; blank in the sample data."},
+    {"name": "number", "datatype": "string", "domain": {"kind": "regex", "pattern": "^INV-[0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Human-readable invoice number, e.g. INV-0016."},
+    {"name": "autopay", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates whether this invoice is set to be automatically paid when due."},
+    {"name": "currency", "datatype": "string", "domain": {"kind": "categories", "values": ["usd", "cad"], "missing": "null"}, "unit": {"kind": "currency"}, "description": "Currency of the invoice amounts (ISO 4217 lowercase)."},
+    {"name": "draft", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Whether the invoice is still in draft state (not yet issued)."},
+    {"name": "closed", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Indicates if the invoice is closed (no further changes expected)."},
+    {"name": "paid", "datatype": "boolean", "domain": {"kind": "categories", "values": ["true", "false"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Whether the invoice has been fully paid."},
+    {"name": "status", "datatype": "string", "domain": {"kind": "categories", "values": ["paid", "voided"], "missing": "null"}, "unit": {"kind": "category"}, "description": "High-level invoice status (e.g., paid, voided)."},
+    {"name": "attempt_count", "datatype": "integer", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "count"}, "description": "Number of payment attempts made for this invoice."},
+    {"name": "next_payment_attempt", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "datetime"}, "description": "Timestamp or date of the next scheduled payment attempt, if any."},
+    {"name": "subscription", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "identifier"}, "description": "Identifier of the related subscription, for recurring invoices (blank in sample)."},
+    {"name": "date", "datatype": "integer", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Unix timestamp (seconds) representing the invoice issue date."},
+    {"name": "due_date", "datatype": "integer", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Unix timestamp (seconds) representing the invoice due date."},
+    {"name": "payment_terms", "datatype": "string", "domain": {"kind": "categories", "values": ["AutoPay", "NET 60"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Payment terms applied to this invoice (e.g., NET 60, AutoPay)."},
+    {"name": "purchase_order", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "identifier"}, "description": "Customer purchase order number associated with this invoice, if provided."},
+    {"name": "notes", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "text"}, "description": "Free-form notes printed on the invoice."},
+    {"name": "subtotal", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Invoice subtotal before taxes and discounts."},
+    {"name": "total", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Total amount of the invoice after taxes and discounts."},
+    {"name": "balance", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Outstanding balance remaining on the invoice."},
+    {"name": "payment_plan", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "identifier"}, "description": "Identifier of an associated payment plan, if the invoice is on installments."},
+    {"name": "url", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Public URL where the hosted invoice can be viewed."},
+    {"name": "payment_url", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "URL where the customer can pay the invoice online."},
+    {"name": "pdf_url", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Direct URL to download the invoice PDF."},
+    {"name": "created_at", "datatype": "integer", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Unix timestamp (seconds) when the invoice record was created."},
+    {"name": "updated_at", "datatype": "integer", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Unix timestamp (seconds) when the invoice record was last updated."},
+    {"name": "items_json", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Serialized JSON array of invoice line items, including quantities, unit prices, and catalog references."},
+    {"name": "discounts_json", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Serialized JSON array of discounts applied to the invoice."},
+    {"name": "taxes_json", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Serialized JSON array of tax lines applied to the invoice, including amounts and tax rates."},
+    {"name": "ship_to_json", "datatype": "string", "domain": {"kind": "text", "missing": "empty_string"}, "unit": {"kind": "text"}, "description": "Serialized JSON object describing the shipping address and contact for the invoice, if different from billing."},
+    {"name": "metadata_json", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Serialized JSON object of arbitrary key-value metadata attached to the invoice."}
   ]
 }

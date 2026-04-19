@@ -1,0 +1,2 @@
+customer,id,object,name,title,email,phone,primary,sms_enabled,department,address1,address2,city,state,postal_code,country,created_at,updated_at
+10001,20001,contact,Jane Doe,Director,jane@example.com,+1-555-123-4567,true,false,Sales,1 Main St,,Springfield,IL,62701,US,2024-01-01T12:00:00,2024-01-01T12:00:00

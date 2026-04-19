@@ -1,23 +1,19 @@
 # Invoices
 
 ## Summary
-Customer billing documents exported from Invoiced.com for Div’s Furniture Manufacturing Co, including status, amounts, key dates, and links back to the source system.
+Sales invoices exported from Invoiced.com for Div’s Furniture Manufacturing Co. Represents billing documents issued to customers for furniture sales and related charges.
 
 ## Row meaning
-Each row represents a single invoice issued to a customer in Invoiced.com.
+Each row represents a single invoice, including status, dates, monetary amounts, links to hosted documents, and embedded JSON for line items, discounts, taxes, and shipping.
 
 ## Relationships
-- `customer` links to `customers.id` in the `customers` sheet/table.
-- JSON fields (`items_json`, `discounts_json`, `taxes_json`, `ship_to_json`, `metadata_json`) can be exploded into separate detail tables if needed (e.g., invoice line items, taxes, shipping address, custom metadata).
+- `customer` is a foreign key to `customers.id` (customer-to-invoice = 1-to-many).
+- Line items, discounts, taxes, and shipping addresses are stored as JSON blobs (`items_json`, `discounts_json`, `taxes_json`, `ship_to_json`) and would typically be normalized into separate tables.
 
 ## Datasource
-- File: `uploads/Div_s_Furniture_Manufacturing_Co.xlsx`
-- Worksheet: `invoices`
-- Source system noted in `meta` sheet as Invoiced.com.
+- File: `Div_s_Furniture_Manufacturing_Co.xlsx`
+- Sheet: `invoices`
+- Upstream system noted in `meta` sheet as Invoiced.com.
 
 ## Retrieval process
-This dataset is provided as an Excel export. To refresh it:
-- Pull the latest `Div_s_Furniture_Manufacturing_Co.xlsx` export from Invoiced.com (or the connected Google Sheet described in the `meta` sheet).
-- Read the `invoices` worksheet as a flat table.
-- There is no in-file pagination; all invoices are contained in a single sheet.
-- For incremental ingestion, use `updated_at` as the cursor field to detect new or changed invoices.
+In the Excel context this is a static extract. In the source Invoiced API this would typically come from a `GET /invoices` endpoint with pagination and filters such as `updated_at` or `date` for incremental loads. For this workbook, ingestion is a full refresh of the `invoices` sheet on each pull.

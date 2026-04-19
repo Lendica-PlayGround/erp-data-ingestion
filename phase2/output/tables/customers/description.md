@@ -1,16 +1,20 @@
 # Customers
 
 ## Summary
-The Customers table contains information about the clients of Div's Furniture Manufacturing Co. It includes details such as customer ID, name, contact information, and financial terms.
+Customer master data synchronized from Invoiced.com for Div’s Furniture Manufacturing Co. Represents organizations and people that purchase furniture and receive invoices.
 
 ## Row meaning
-Each row represents a unique customer.
+Each row represents a single customer account in Invoiced (company or person), including billing profile, credit settings, tax configuration, and statement URLs.
 
 ## Relationships
-This table is related to the Contacts table through the customer ID and to the Invoices table through the customer ID.
+- `id` links to `contacts.customer` (customer-to-contact = 1-to-many).
+- `id` links to `invoices.customer` (customer-to-invoice = 1-to-many).
+- `parent_customer` can reference another `customers.id` for hierarchical customer structures.
 
 ## Datasource
-Extracted from the `customers` sheet of the uploaded Excel file `Div_s_Furniture_Manufacturing_Co.xlsx`.
+- File: `Div_s_Furniture_Manufacturing_Co.xlsx`
+- Sheet: `customers`
+- Upstream system noted in `meta` sheet as Invoiced.com.
 
 ## Retrieval process
-This data is part of the Excel file and can be accessed by reading the `customers` sheet.
+In the Excel context this is a static extract. In the source Invoiced API this would typically come from a `GET /customers` endpoint with cursor or page-based pagination, filterable by `updated_at` for incremental loads. For this workbook, ingestion is a full refresh of the `customers` sheet on each pull.

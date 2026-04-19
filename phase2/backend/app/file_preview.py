@@ -31,7 +31,21 @@ def content_payload(logical_path: str, target: Path) -> dict:
 
 
 def _xlsx_payload(logical_path: str, target: Path, max_rows: int) -> dict:
-    from openpyxl import load_workbook
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        stat = target.stat()
+        return {
+            "path": logical_path,
+            "size": stat.st_size,
+            "mtime": stat.st_mtime,
+            "binary": False,
+            "content": (
+                "Excel preview unavailable: openpyxl is not installed in this API environment.\n\n"
+                "Fix: cd phase2/backend && . .venv/bin/activate && pip install -r requirements.txt\n"
+                "Then restart the backend (make dev)."
+            ),
+        }
 
     sheets_out: list[dict] = []
     wb = load_workbook(filename=target, read_only=True, data_only=True)
