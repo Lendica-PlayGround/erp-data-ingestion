@@ -1,0 +1,2 @@
+id,remote_id,name,email_address,is_customer,is_supplier,status,currency,company
+customer_internal_1,src_customer_1,Acme Customer,customer@acme.test,true,false,ACTIVE,USD,company_123
