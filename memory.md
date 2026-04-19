@@ -47,16 +47,14 @@
 - `README.md` should stay concise and serve as the human-facing summary of project purpose and process
 - `docs/specs/` is the canonical location for feature specs
 - Product-oriented documentation should live in `docs/`
+- `docs/sources/` is the canonical location for raw source-system data formats (e.g. Invoiced.com, Stripe)
+- Invoiced.com source format contract lives at `docs/sources/invoiced-data-format.md`
+- Simulated "raw dump" feeders live under `seeds/generators/<source>/` (one sub-package per source)
+- Convention for landing nested API fields into a flat sheet/CSV: top-level scalars as columns; nested objects/arrays as JSON strings in a `*_json` column (e.g. `items_json`, `metadata_json`)
 
 ### What was tried
 - 2026-04-18: Added root `README.md` and `memory.md`
 - 2026-04-18: Created a design spec for documentation and process rules in `docs/specs/2026-04-18-documentation-process-rules-design.md`
 - 2026-04-18: Created an implementation plan in `docs/superpowers/plans/2026-04-18-documentation-process-rules.md`
-- 2026-04-18: Implemented Phase 2 Exploration Chatbot under `phase2/` — FastAPI backend (`phase2/backend/`) with OpenAI streaming tool-calling loop; Next.js 15 frontend (`phase2/frontend/`) with split-pane chat + live workspace. Artifacts are written to `phase2/output/` and auto-committed to the outer repo (scoped). Spec: `docs/specs/2026-04-18-phase2-exploration-chatbot.md`. Root `.gitignore` was updated with `!phase2/output/` so agent-authored artifacts stay tracked despite the repo-wide `output/` ignore.
-
-### Phase 2 durable context
-- `OPENAI_API_KEY` lives in `phase2/backend/.env` (git-ignored). `.env.example` documents other knobs (`PHASE2_MODEL`, `PHASE2_OUTPUT_DIR`, `PHASE2_UPLOAD_DIR`, `PHASE2_FRONTEND_ORIGIN`).
-- Agent tool filesystem access is allow-listed: writes to `phase2/output/`, reads from `phase2/backend/uploads/<session_id>/`. Path traversal is rejected in `phase2/backend/app/tools.py::_resolve_safe`.
-- Auto-commits only stage paths under `phase2/output/`; see `phase2/backend/app/git_ops.py::commit_output`.
-- Frontend proxies `/api/*` to `http://127.0.0.1:8000` via `phase2/frontend/next.config.mjs`.
-- Output contract: per table, write `phase2/output/tables/<slug>/description.md` + `columns.json`, plus a running `phase2/output/INDEX.md`. The contract is encoded in the system prompt at `phase2/backend/app/agent.py::SYSTEM_PROMPT`.
+- 2026-04-18: Added `docs/sources/invoiced-data-format.md` recording the raw Invoiced.com API shape for Customers, Contacts, and Invoices
+- 2026-04-18: Added `seeds/generators/invoiced/` feeder — a 30s-cadence simulator that appends Invoiced-shaped Customers/Contacts/Invoices to Google Sheets with realistic onboarding + lifecycle transitions

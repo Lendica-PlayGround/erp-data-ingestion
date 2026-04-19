@@ -23,7 +23,7 @@ Two distinct merge.dev models share the label "Contact", so we disambiguate:
 The **JSON Schemas are the contract**. Pydantic models and this markdown must track them. See §9 for precedence when the three disagree.
 
 ```
-midlayer-schema-guide/midlayer/v1/
+mira/midlayer/v1/
   invoice.schema.json    ← canonical path (Accounting Invoice)
   customer.schema.json   ← canonical path (Accounting Contact)
   contact.schema.json    ← canonical path (CRM Contact)
@@ -233,27 +233,27 @@ Two rows with the same mapped content produce the same `_row_hash` regardless of
  (Stripe CSV,                     │ (this schema guide)      │         │
   Google Sheets, …)               └──────────────────────────┘         │
                                                                         ▼
-                                              midlayer-schema-guide/midlayer-csv-spec.md
+                                              mira/midlayer-schema-guide/midlayer-csv-spec.md
                                               (how the CSV lands on disk)
 ```
 
-- **This document (`midlayer-schema-guide/midlayer-schema-guide.md`)** defines *what* a mid-layer row is (semantics, types, enums, merge.dev alignment).
-- **`midlayer-schema-guide/midlayer-csv-spec.md`** defines *how* those rows are written to disk (folder layout, file naming, sidecar JSON, validation gate).
+- **This document (`mira/midlayer-schema-guide/midlayer-schema-guide.md`)** defines *what* a mid-layer row is (semantics, types, enums, merge.dev alignment).
+- **`mira/midlayer-schema-guide/midlayer-csv-spec.md`** defines *how* those rows are written to disk (folder layout, file naming, sidecar JSON, validation gate).
 - **`seeds/samples/midlayer-csv/`** shows *concrete examples* of both, for all three tables.
 
 ### Precedence when these disagree
 
-1. The JSON Schemas (`midlayer-schema-guide/midlayer/v1/*.schema.json`) are the machine-checkable contract for **which fields exist, their types, nullability, and enum values**.
+1. The JSON Schemas (`mira/midlayer/v1/*.schema.json`) are the machine-checkable contract for **which fields exist, their types, nullability, and enum values**.
 2. This guide is authoritative for **semantics, formatting conventions, and merge.dev alignment** (e.g. money in major units with 4 decimal places, ISO 8601 UTC with `Z`, alphabetical key ordering in JSON cells). Where a convention is not expressible in JSON Schema, this guide wins and the mapper must enforce it.
 3. `midlayer-csv-spec.md` is authoritative for **on-disk concerns**: bucket layout, file naming, sidecar JSON, validation gate, initial-vs-delta semantics.
 4. `schemas.midlayer.v1.models.{INVOICE,CUSTOMER,CONTACT}_COLUMNS` is authoritative for **CSV header order**. Markdown tables in this guide are illustrative; if they drift, trust the Python list.
 
 ## 10. Confirmation checklist
 
-- [x] `midlayer-schema-guide/midlayer/v1/invoice.schema.json` exists and is aligned with merge.dev Accounting Invoice.
-- [x] `midlayer-schema-guide/midlayer/v1/customer.schema.json` exists and is aligned with merge.dev Accounting Contact.
-- [x] `midlayer-schema-guide/midlayer/v1/contact.schema.json` exists and is aligned with merge.dev CRM Contact.
+- [x] `mira/midlayer/v1/invoice.schema.json` exists and is aligned with merge.dev Accounting Invoice.
+- [x] `mira/midlayer/v1/customer.schema.json` exists and is aligned with merge.dev Accounting Contact.
+- [x] `mira/midlayer/v1/contact.schema.json` exists and is aligned with merge.dev CRM Contact.
 - [x] All three schemas share the same metadata block and enforce `additionalProperties: false`.
-- [x] Pydantic models in `midlayer-schema-guide/midlayer/v1/models.py` mirror the JSON Schemas and define canonical column order.
-- [x] CSV on-disk contract documented separately in `midlayer-schema-guide/midlayer-csv-spec.md`.
+- [x] Pydantic models in `mira/midlayer/v1/models.py` mirror the JSON Schemas and define canonical column order.
+- [x] CSV on-disk contract documented separately in `mira/midlayer-schema-guide/midlayer-csv-spec.md`.
 - [x] Worked examples for all three tables committed under `seeds/samples/midlayer-csv/`.

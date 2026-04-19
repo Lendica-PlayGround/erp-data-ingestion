@@ -3,8 +3,8 @@
 **Status:** authoritative for Phase 1 mapper output and the Phase 3 loader contract.
 
 **Companion docs (read together):**
-- `midlayer-schema-guide/midlayer-schema-guide.md` — row semantics, types, enums, merge.dev alignment.
-- `midlayer-schema-guide/midlayer/v1/*.schema.json` — machine-checkable field contract.
+- `mira/midlayer-schema-guide/midlayer-schema-guide.md` — row semantics, types, enums, merge.dev alignment.
+- `mira/midlayer/v1/*.schema.json` — machine-checkable field contract.
 - `seeds/samples/midlayer-csv/` — worked example of everything on this page.
 
 ## 1. Bucket & paths

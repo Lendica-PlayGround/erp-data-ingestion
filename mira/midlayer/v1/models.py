@@ -16,7 +16,7 @@ Two important details:
 Construct models with either keyword (``source_system=...``) or alias
 (``**{"_source_system": ...}``) forms; dump with ``model_dump(by_alias=True)``
 or ``model_dump_json(by_alias=True)`` to get the canonical column names back.
-JSON Schemas in ``midlayer-schema-guide/midlayer/v1/*.schema.json`` remain the
+JSON Schemas in ``mira/schemas/midlayer/v1/*.schema.json`` remain the
 public contract; these models exist for runtime validation and for
 authoritative header ordering.
 """

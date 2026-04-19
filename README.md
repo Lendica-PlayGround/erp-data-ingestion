@@ -6,7 +6,7 @@ This repository is for an agentic ERP and data-provider ingestion system that st
 
 The current repository includes:
 - Django app scaffolding under `apps/django_api/`
-- Mid-layer schemas under `schemas/midlayer/v1/`
+- **Mira** (Phase 2–3 agent) under [`mira/`](./mira/) — see [`mira/README.md`](./mira/README.md)
 - Seed datasets under `seeds/`
 - Product and phase specs under `docs/`
 
@@ -15,7 +15,6 @@ The current repository includes:
 The current project specs live in:
 - [`docs/0001-prd.md`](./docs/0001-prd.md)
 - [`docs/0002-phase1-midlayer-csv-contract.md`](./docs/0002-phase1-midlayer-csv-contract.md)
-- [`docs/specs/2026-04-18-phase2-exploration-chatbot.md`](./docs/specs/2026-04-18-phase2-exploration-chatbot.md)
 - [`docs/discussion/initial-discussion.md`](./docs/discussion/initial-discussion.md)
 
 For now, these documents are the source of truth for product direction and phase-one scope.
@@ -25,19 +24,19 @@ Feature and design specs going forward should be added under [`docs/specs/`](./d
 ## Repository Layout
 
 ```text
+mira/      Phase 2–3 Mira agent: LangGraph runtime, skills, framework, schemas, SQL, tests
 apps/      Application code and Django project scaffolding
 docs/      Product requirements, phase specs, and discussion notes
-phase2/    Exploration Chatbot (FastAPI + Next.js)
-schemas/   Mid-layer schema definitions
+           - docs/sources/   Raw source-system data formats (e.g. Invoiced.com)
+           - docs/specs/     Feature specs authored before implementation
 seeds/     Example source data and manifests
+           - seeds/generators/gsheets_invoice_feeder.py
+             Stripe-shaped synthetic invoice feeder (legacy demo).
+           - seeds/generators/invoiced/
+             Invoiced.com raw-dump feeder — appends Customers, Contacts,
+             and Invoices every 30s, simulating a recurring API pull.
+             See docs/sources/invoiced-data-format.md for the column contract.
 ```
-
-## Phase 2: Exploration Chatbot
-
-A ChatGPT-style agent that explores unfamiliar datasets / APIs / docs and
-produces structured table descriptions + column info, auto-committed to
-`phase2/output/`. See [`phase2/README.md`](./phase2/README.md) for setup
-(`make -C phase2 install && make -C phase2 dev`).
 
 ## Documentation And Process
 
@@ -48,4 +47,13 @@ produces structured table descriptions + column info, auto-committed to
 
 ## Architecture
 
-TBD.
+Phase 2–3 **Mira** is isolated under [`mira/`](./mira/):
+
+- `mira/agent/mira/*.md` — bootstrap persona and operating rules (OpenClaw-inspired).
+- `mira/agent/skills/<id>/SKILL.md` — skill catalog; tools in `mira/agent/runtime/tools.py`.
+- `mira/agent/runtime/` — LangGraph graph, Telegram binding, CLI (`mira`), optional JWT dashboard.
+- `mira/framework/` — shared connector library; generated code lands in `mira/connectors/` or the run workspace.
+- `mira/schemas/midlayer/v1/` — canonical JSON Schema; `mira/schemas/mapping_contract/v1.schema.json` validates Phase 2.5 contracts.
+- `mira/supabase/migrations/` — `onboarding_runs` + state-transition trigger.
+
+Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.
