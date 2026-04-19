@@ -38,15 +38,20 @@ class ContactRecord:
     id: str
     remote_id: Optional[str] = None
     name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     email_address: Optional[str] = None
+    email_addresses: List[Dict[str, Any]] = field(default_factory=list)
     tax_number: Optional[str] = None
     is_customer: Optional[bool] = None
     is_supplier: Optional[bool] = None
     status: Optional[str] = None
     currency: Optional[str] = None
     remote_updated_at: Optional[datetime] = None
+    remote_created_at: Optional[datetime] = None
     remote_was_deleted: bool = False
     company: Optional[str] = None
+    account_external_id: Optional[str] = None
     addresses: List[Dict[str, Any]] = field(default_factory=list)
     phone_numbers: List[Dict[str, Any]] = field(default_factory=list)
     remote_data: List[Dict[str, Any]] = field(default_factory=list)

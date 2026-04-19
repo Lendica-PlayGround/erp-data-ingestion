@@ -40,6 +40,31 @@ def test_contact_record_requires_customer_or_supplier_role() -> None:
         )
 
 
+def test_contact_record_supports_customer_and_crm_contact_inputs() -> None:
+    customer_contact = ContactRecord(
+        id="cus_acme_001",
+        name="Acme Holdings",
+        is_customer=True,
+        is_supplier=False,
+        email_address="finance@acme.example",
+    )
+    crm_contact = ContactRecord(
+        id="contact_acme_001",
+        first_name="Alice",
+        last_name="Ng",
+        name="Alice Ng",
+        account_external_id="cus_acme_001",
+        email_addresses=[{"email_address": "alice.ng@acme.example"}],
+        is_customer=True,
+        is_supplier=False,
+    )
+
+    assert customer_contact.email_address == "finance@acme.example"
+    assert crm_contact.first_name == "Alice"
+    assert crm_contact.account_external_id == "cus_acme_001"
+    assert crm_contact.email_addresses[0]["email_address"] == "alice.ng@acme.example"
+
+
 def test_run_metadata_record_captures_control_plane_fields() -> None:
     metadata = RunMetadataRecord(
         run_id="run-42",

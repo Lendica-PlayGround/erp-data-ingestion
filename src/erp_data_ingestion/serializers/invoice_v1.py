@@ -10,11 +10,11 @@ from erp_data_ingestion.models import InvoiceRecord
 class InvoiceV1Serializer:
     def serialize_row(self, row: dict[str, str]) -> dict[str, Any]:
         invoice = InvoiceRecord(
-            id=row["id"],
-            remote_id=self._optional_str(row.get("remote_id")),
+            id=row["external_id"],
+            remote_id=row.get("_source_record_id") or row["external_id"],
             number=self._optional_str(row.get("number")),
-            contact=self._optional_str(row.get("contact")),
-            company=self._optional_str(row.get("company")),
+            contact=self._optional_str(row.get("contact_external_id")),
+            company=self._optional_str(row.get("_company_id")),
             issue_date=self._optional_datetime(row.get("issue_date")),
             due_date=self._optional_datetime(row.get("due_date")),
             paid_on_date=self._optional_datetime(row.get("paid_on_date")),
@@ -37,7 +37,7 @@ class InvoiceV1Serializer:
         payload = asdict(record)
         for key, value in list(payload.items()):
             if isinstance(value, datetime):
-                payload[key] = value.isoformat()
+                payload[key] = value.isoformat().replace("+00:00", "Z")
             elif value == {} or value == []:
                 payload[key] = None
         return payload
@@ -55,7 +55,7 @@ class InvoiceV1Serializer:
     def _optional_datetime(self, value: Any) -> datetime | None:
         if value in (None, ""):
             return None
-        return datetime.fromisoformat(str(value))
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
     def _optional_bool(self, value: Any) -> bool:
         if value in (None, "", False):
