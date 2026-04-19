@@ -1,0 +1,674 @@
+{
+  "generated_at": "2026-04-19T16:40:00Z",
+  "phase2_output_dir": "/Users/jameschen/Documents/Code/erp-data-ingestion/phase2/output",
+  "midlayer_schema_dir": "/Users/jameschen/Documents/Code/erp-data-ingestion/midlayer-schema-guide/midlayer/v1",
+  "model": "gpt-4o",
+  "tables": [
+    {
+      "phase2_table": "contacts",
+      "midlayer_table": "contacts",
+      "routing_note": "Mapping Phase 2 contacts table to mid-layer contacts table based on CRM Contact model.",
+      "columns": [
+        {
+          "phase2_column": "external_id",
+          "midlayer_columns": [
+            "external_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "first_name",
+          "midlayer_columns": [
+            "first_name"
+          ],
+          "processing_steps": [
+            "cast to string",
+            "trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "last_name",
+          "midlayer_columns": [
+            "last_name"
+          ],
+          "processing_steps": [
+            "cast to string",
+            "trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "account_external_id",
+          "midlayer_columns": [
+            "account_external_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "addresses",
+          "midlayer_columns": [
+            "addresses"
+          ],
+          "processing_steps": [
+            "minify JSON",
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "email_addresses",
+          "midlayer_columns": [
+            "email_addresses"
+          ],
+          "processing_steps": [
+            "minify JSON",
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "phone_numbers",
+          "midlayer_columns": [
+            "phone_numbers"
+          ],
+          "processing_steps": [
+            "minify JSON",
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "last_activity_at",
+          "midlayer_columns": [
+            "last_activity_at"
+          ],
+          "processing_steps": [
+            "cast to ISO 8601 UTC datetime"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "remote_created_at",
+          "midlayer_columns": [
+            "remote_created_at"
+          ],
+          "processing_steps": [
+            "cast to ISO 8601 UTC datetime"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "remote_was_deleted",
+          "midlayer_columns": [
+            "remote_was_deleted"
+          ],
+          "processing_steps": [
+            "cast to boolean"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_unmapped",
+          "midlayer_columns": [
+            "_unmapped"
+          ],
+          "processing_steps": [
+            "minify JSON",
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_system",
+          "midlayer_columns": [
+            "_source_system"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_record_id",
+          "midlayer_columns": [
+            "_source_record_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_company_id",
+          "midlayer_columns": [
+            "_company_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_ingested_at",
+          "midlayer_columns": [
+            "_ingested_at"
+          ],
+          "processing_steps": [
+            "cast to ISO 8601 UTC datetime"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_file",
+          "midlayer_columns": [
+            "_source_file"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_mapping_version",
+          "midlayer_columns": [
+            "_mapping_version"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_row_hash",
+          "midlayer_columns": [
+            "_row_hash"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "phase2_table": "customers",
+      "midlayer_table": "customers",
+      "routing_note": "Mapping Phase 2 'customers' table to mid-layer 'customers' table based on column names and descriptions.",
+      "columns": [
+        {
+          "phase2_column": "external_id",
+          "midlayer_columns": [
+            "external_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "name",
+          "midlayer_columns": [
+            "name"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "is_supplier",
+          "midlayer_columns": [
+            "is_supplier"
+          ],
+          "processing_steps": [
+            "cast to boolean"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "is_customer",
+          "midlayer_columns": [
+            "is_customer"
+          ],
+          "processing_steps": [
+            "cast to boolean"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "email_address",
+          "midlayer_columns": [
+            "email_address"
+          ],
+          "processing_steps": [
+            "cast to string",
+            "validate email format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "tax_number",
+          "midlayer_columns": [
+            "tax_number"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "status",
+          "midlayer_columns": [
+            "status"
+          ],
+          "processing_steps": [
+            "enum normalization: ACTIVE to ACTIVE, INACTIVE to ARCHIVED"
+          ],
+          "confidence": 0.9
+        },
+        {
+          "phase2_column": "currency",
+          "midlayer_columns": [
+            "currency"
+          ],
+          "processing_steps": [
+            "cast to string",
+            "uppercase",
+            "validate ISO-4217 format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "remote_updated_at",
+          "midlayer_columns": [
+            "remote_updated_at"
+          ],
+          "processing_steps": [
+            "cast to datetime",
+            "convert to ISO 8601 UTC"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "phone_number",
+          "midlayer_columns": [
+            "phone_number"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "addresses",
+          "midlayer_columns": [
+            "addresses"
+          ],
+          "processing_steps": [
+            "minify JSON"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "remote_was_deleted",
+          "midlayer_columns": [
+            "remote_was_deleted"
+          ],
+          "processing_steps": [
+            "cast to boolean"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_unmapped",
+          "midlayer_columns": [
+            "_unmapped"
+          ],
+          "processing_steps": [
+            "minify JSON"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_system",
+          "midlayer_columns": [
+            "_source_system"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_record_id",
+          "midlayer_columns": [
+            "_source_record_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_company_id",
+          "midlayer_columns": [
+            "_company_id"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_ingested_at",
+          "midlayer_columns": [
+            "_ingested_at"
+          ],
+          "processing_steps": [
+            "cast to datetime",
+            "convert to ISO 8601 UTC"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_file",
+          "midlayer_columns": [
+            "_source_file"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_mapping_version",
+          "midlayer_columns": [
+            "_mapping_version"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_row_hash",
+          "midlayer_columns": [
+            "_row_hash"
+          ],
+          "processing_steps": [
+            "cast to string"
+          ],
+          "confidence": 1.0
+        }
+      ]
+    },
+    {
+      "phase2_table": "invoices",
+      "midlayer_table": "invoices",
+      "routing_note": "Mapping Phase 2 'invoices' table to mid-layer 'invoices' table based on column names and descriptions.",
+      "columns": [
+        {
+          "phase2_column": "external_id",
+          "midlayer_columns": [
+            "external_id"
+          ],
+          "processing_steps": [
+            "Trim whitespace",
+            "Ensure prefix 'in_' is preserved"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "type",
+          "midlayer_columns": [
+            "type"
+          ],
+          "processing_steps": [
+            "Enum normalization to 'ACCOUNTS_RECEIVABLE'"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "number",
+          "midlayer_columns": [
+            "number"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "contact_external_id",
+          "midlayer_columns": [
+            "contact_external_id"
+          ],
+          "processing_steps": [
+            "Trim whitespace",
+            "Ensure prefix 'cus_' is preserved"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "issue_date",
+          "midlayer_columns": [
+            "issue_date"
+          ],
+          "processing_steps": [
+            "Convert to ISO 8601 UTC format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "due_date",
+          "midlayer_columns": [
+            "due_date"
+          ],
+          "processing_steps": [
+            "Convert to ISO 8601 UTC format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "paid_on_date",
+          "midlayer_columns": [
+            "paid_on_date"
+          ],
+          "processing_steps": [
+            "Convert to ISO 8601 UTC format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "memo",
+          "midlayer_columns": [
+            "memo"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "currency",
+          "midlayer_columns": [
+            "currency"
+          ],
+          "processing_steps": [
+            "Convert to uppercase",
+            "Validate against ISO-4217"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "exchange_rate",
+          "midlayer_columns": [
+            "exchange_rate"
+          ],
+          "processing_steps": [
+            "Convert to string preserving precision"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "total_discount",
+          "midlayer_columns": [
+            "total_discount"
+          ],
+          "processing_steps": [
+            "Convert to string with 4 decimal places"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "sub_total",
+          "midlayer_columns": [
+            "sub_total"
+          ],
+          "processing_steps": [
+            "Convert to string with 4 decimal places"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "total_tax_amount",
+          "midlayer_columns": [
+            "total_tax_amount"
+          ],
+          "processing_steps": [
+            "Convert to string with 4 decimal places"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "total_amount",
+          "midlayer_columns": [
+            "total_amount"
+          ],
+          "processing_steps": [
+            "Convert to string with 4 decimal places"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "balance",
+          "midlayer_columns": [
+            "balance"
+          ],
+          "processing_steps": [
+            "Convert to string with 4 decimal places"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "status",
+          "midlayer_columns": [
+            "status"
+          ],
+          "processing_steps": [
+            "Enum normalization to 'PAID' or 'OPEN'"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "remote_was_deleted",
+          "midlayer_columns": [
+            "remote_was_deleted"
+          ],
+          "processing_steps": [
+            "Convert to boolean"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_unmapped",
+          "midlayer_columns": [
+            "_unmapped"
+          ],
+          "processing_steps": [
+            "Minify JSON"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_system",
+          "midlayer_columns": [
+            "_source_system"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_record_id",
+          "midlayer_columns": [
+            "_source_record_id"
+          ],
+          "processing_steps": [
+            "Trim whitespace",
+            "Ensure prefix 'in_' is preserved"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_company_id",
+          "midlayer_columns": [
+            "_company_id"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_ingested_at",
+          "midlayer_columns": [
+            "_ingested_at"
+          ],
+          "processing_steps": [
+            "Convert to ISO 8601 UTC format"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_source_file",
+          "midlayer_columns": [
+            "_source_file"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_mapping_version",
+          "midlayer_columns": [
+            "_mapping_version"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        },
+        {
+          "phase2_column": "_row_hash",
+          "midlayer_columns": [
+            "_row_hash"
+          ],
+          "processing_steps": [
+            "Trim whitespace"
+          ],
+          "confidence": 1.0
+        }
+      ]
+    }
+  ]
+}

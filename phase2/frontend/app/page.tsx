@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Chat } from "@/components/Chat";
 import { WorkspacePanel } from "@/components/WorkspacePanel";
 import type { UploadedFile } from "@/lib/types";
-import { deleteSessionUpload, listSessionUploads } from "@/lib/api";
+import { deleteSessionUpload, listSessionUploads, runHandshakePipeline } from "@/lib/api";
+import { Loader2 } from "lucide-react";
 
 function makeSessionId(): string {
   return `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -15,6 +16,7 @@ export default function Page() {
   const [uploads, setUploads] = useState<UploadedFile[]>([]);
   const [changeToken, setChangeToken] = useState(0);
   const [commitToken, setCommitToken] = useState(0);
+  const [handshakeBusy, setHandshakeBusy] = useState(false);
 
   // Hydrate / persist session id on client only.
   useEffect(() => {
@@ -31,6 +33,35 @@ export default function Page() {
 
   const onCommit = useCallback(() => setCommitToken((t) => t + 1), []);
   const onFileWritten = useCallback(() => setChangeToken((t) => t + 1), []);
+
+  const runHandshake = useCallback(async () => {
+    if (handshakeBusy || !sessionId) return;
+    setHandshakeBusy(true);
+    try {
+      const r = await runHandshakePipeline(sessionId);
+      setChangeToken((t) => t + 1);
+      if (r.ok) {
+        alert(
+          `Handshake complete.\n\nArtifacts in workspace:\n${r.artifacts.length ? r.artifacts.join("\n") : "(none)"}`,
+        );
+      } else {
+        const failed = r.steps.find((s) => !s.ok);
+        const stderr = failed?.stderr?.slice(0, 4000) ?? "";
+        const hint = failed
+          ? `${failed.step} failed (exit ${failed.returncode}).\n\nstderr:\n${stderr}`
+          : "Unknown failure.";
+        const partial =
+          r.map_ok && r.codegen_ok === false
+            ? "\n\nNote: Column mapping (map) succeeded — handshake_mapping.json was written. Codegen (Python script) failed; fix stderr below or run: cd phase2.5 && python -m handshake_mapping codegen …"
+            : "";
+        alert(`Handshake did not finish successfully.${partial}\n\n${hint}`);
+      }
+    } catch (e) {
+      alert("Handshake failed: " + (e as Error).message);
+    } finally {
+      setHandshakeBusy(false);
+    }
+  }, [handshakeBusy, sessionId]);
 
   const removeUpload = useCallback(
     async (clientPath: string) => {
@@ -64,7 +95,19 @@ export default function Page() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-ink-400">
-          <span className="font-mono">{sessionId}</span>
+          <button
+            type="button"
+            onClick={() => void runHandshake()}
+            disabled={handshakeBusy}
+            title="Run Phase 2.5: AI column handshake (map) then generate Python mapper (codegen). Uses this session’s uploaded source files (csv/tsv/txt/json, any filenames) for codegen previews."
+            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-ink-950 hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {handshakeBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : null}
+            {handshakeBusy ? "Running handshake…" : "Run handshake"}
+          </button>
+          <span className="hidden font-mono sm:inline">{sessionId}</span>
           <button
             type="button"
             onClick={() => {

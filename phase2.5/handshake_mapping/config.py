@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     output_file: Path = Field(
         default=Path("./output/handshake_mapping.json"), alias="PHASE25_OUTPUT_FILE"
     )
+    mapper_script_out: Path = Field(
+        default=Path("./output/handshake_run_mapper.py"),
+        alias="PHASE25_MAPPER_SCRIPT_OUT",
+    )
 
     @property
     def phase2_output_path(self) -> Path:
@@ -48,6 +52,13 @@ class Settings(BaseSettings):
     @property
     def output_path(self) -> Path:
         p = self.output_file
+        if not p.is_absolute():
+            p = (_PKG_DIR / p).resolve()
+        return p
+
+    @property
+    def mapper_script_path(self) -> Path:
+        p = self.mapper_script_out
         if not p.is_absolute():
             p = (_PKG_DIR / p).resolve()
         return p

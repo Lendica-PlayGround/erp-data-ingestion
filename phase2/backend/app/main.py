@@ -7,7 +7,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import artifacts, chat, commits, events, uploads
+from .routes import artifacts, chat, commits, events, handshake, uploads
 from .settings import get_settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(artifacts.router, prefix="/api")
     app.include_router(commits.router, prefix="/api")
     app.include_router(events.router, prefix="/api")
+    app.include_router(handshake.router, prefix="/api")
     return app
 
 

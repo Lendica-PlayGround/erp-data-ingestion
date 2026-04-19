@@ -12,19 +12,25 @@ router = APIRouter()
 @router.get("/artifacts")
 async def list_artifacts() -> dict:
     root = get_settings().output_path
-    root.mkdir(parents=True, exist_ok=True)
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise HTTPException(500, f"cannot create output directory: {exc}") from exc
     files = []
-    for p in sorted(root.rglob("*")):
-        if p.is_dir() or any(part.startswith(".") for part in p.relative_to(root).parts):
-            continue
-        stat = p.stat()
-        files.append(
-            {
-                "path": p.relative_to(root).as_posix(),
-                "size": stat.st_size,
-                "mtime": stat.st_mtime,
-            }
-        )
+    try:
+        for p in sorted(root.rglob("*")):
+            if p.is_dir() or any(part.startswith(".") for part in p.relative_to(root).parts):
+                continue
+            stat = p.stat()
+            files.append(
+                {
+                    "path": p.relative_to(root).as_posix(),
+                    "size": stat.st_size,
+                    "mtime": stat.st_mtime,
+                }
+            )
+    except OSError as exc:
+        raise HTTPException(500, f"cannot list output directory: {exc}") from exc
     return {"files": files}
 
 
