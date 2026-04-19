@@ -6,7 +6,7 @@ This repository is for an agentic ERP and data-provider ingestion system that st
 
 The current repository includes:
 - Django app scaffolding under `apps/django_api/`
-- Mid-layer schemas under `schemas/midlayer/v1/`
+- **Mira** (Phase 2–3 agent) under [`mira/`](./mira/) — see [`mira/README.md`](./mira/README.md)
 - Seed datasets under `seeds/`
 - Product and phase specs under `docs/`
 
@@ -24,11 +24,11 @@ Feature and design specs going forward should be added under [`docs/specs/`](./d
 ## Repository Layout
 
 ```text
+mira/      Phase 2–3 Mira agent: LangGraph runtime, skills, framework, schemas, SQL, tests
 apps/      Application code and Django project scaffolding
 docs/      Product requirements, phase specs, and discussion notes
            - docs/sources/   Raw source-system data formats (e.g. Invoiced.com)
            - docs/specs/     Feature specs authored before implementation
-schemas/   Mid-layer schema definitions
 seeds/     Example source data and manifests
            - seeds/generators/gsheets_invoice_feeder.py
              Stripe-shaped synthetic invoice feeder (legacy demo).
@@ -47,4 +47,13 @@ seeds/     Example source data and manifests
 
 ## Architecture
 
-TBD.
+Phase 2–3 **Mira** is isolated under [`mira/`](./mira/):
+
+- `mira/agent/mira/*.md` — bootstrap persona and operating rules (OpenClaw-inspired).
+- `mira/agent/skills/<id>/SKILL.md` — skill catalog; tools in `mira/agent/runtime/tools.py`.
+- `mira/agent/runtime/` — LangGraph graph, Telegram binding, CLI (`mira`), optional JWT dashboard.
+- `mira/framework/` — shared connector library; generated code lands in `mira/connectors/` or the run workspace.
+- `mira/schemas/midlayer/v1/` — canonical JSON Schema; `mira/schemas/mapping_contract/v1.schema.json` validates Phase 2.5 contracts.
+- `mira/supabase/migrations/` — `onboarding_runs` + state-transition trigger.
+
+Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.

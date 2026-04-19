@@ -4,8 +4,8 @@ This directory is a **concrete, populated example** of what Phase 1's mapper emi
 into the `midlayer-csv` bucket (Supabase Storage in production; local mirror in
 dev). It exists to make the two authoritative docs real:
 
-- **Schema:** `midlayer-schema-guide/midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
-- **CSV contract:** `midlayer-schema-guide/midlayer-csv-spec.md` (folder layout, file naming, sidecars, validation)
+- **Schema:** `mira/midlayer-schema-guide/midlayer-schema-guide.md` (uniform data schema, merge.dev-aligned)
+- **CSV contract:** `mira/midlayer-schema-guide/midlayer-csv-spec.md` (folder layout, file naming, sidecars, validation)
 
 ## What's here
 

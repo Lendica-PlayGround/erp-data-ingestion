@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://erp-data-ingestion/schemas/mapping_contract/v1.schema.json",
+  "title": "Mapping contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mapping_version",
+    "midlayer_schema_version",
+    "company_id",
+    "source_profile",
+    "objects",
+    "sync_strategy",
+    "validation_requirements"
+  ],
+  "properties": {
+    "mapping_version": { "type": "string", "minLength": 1 },
+    "midlayer_schema_version": { "type": "string", "minLength": 1 },
+    "company_id": { "type": "string", "minLength": 1 },
+    "source_profile": { "type": "object" },
+    "objects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "midlayer_table",
+          "source_entity",
+          "fields",
+          "unmapped_source_fields",
+          "object_confidence"
+        ],
+        "properties": {
+          "midlayer_table": { "type": "string" },
+          "source_entity": { "type": "string" },
+          "object_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "unmapped_source_fields": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "midlayer_field",
+                "source_field",
+                "confidence",
+                "transforms"
+              ],
+              "properties": {
+                "midlayer_field": { "type": "string" },
+                "source_field": { "type": "string" },
+                "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                "transforms": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                },
+                "notes": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sync_strategy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["initial", "delta"],
+      "properties": {
+        "initial": { "type": "string" },
+        "delta": { "type": "object" }
+      }
+    },
+    "validation_requirements": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
