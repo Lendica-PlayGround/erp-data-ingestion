@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from erp_data_ingestion.adapters.clickhouse import ClickHouseTelemetrySink
-from erp_data_ingestion.adapters.nebius_object_storage import NebiusObjectStorageAdapter
+from erp_data_ingestion.adapters.supabase_object_storage import SupabaseObjectStorageAdapter
 from erp_data_ingestion.models import RunMetadataRecord, TelemetryEvent
 
 
@@ -22,7 +22,7 @@ class FakeClickHouseClient:
         self.inserts.append((table, data, column_names))
 
 
-def test_nebius_adapter_uploads_parquet_and_manifest_with_bucket_keys(tmp_path: Path) -> None:
+def test_supabase_adapter_uploads_parquet_and_manifest_with_bucket_keys(tmp_path: Path) -> None:
     parquet_path = tmp_path / "company_id=company_123/table=invoice/sync_type=initial/date=2026-04-18/run_id=run-1/invoice.parquet"
     manifest_path = parquet_path.with_name("manifest.json")
     parquet_path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,7 +30,7 @@ def test_nebius_adapter_uploads_parquet_and_manifest_with_bucket_keys(tmp_path: 
     manifest_path.write_text('{"run_id":"run-1"}', encoding="utf-8")
 
     client = FakeS3Client()
-    adapter = NebiusObjectStorageAdapter(bucket="phase4-lake", client=client)
+    adapter = SupabaseObjectStorageAdapter(bucket="phase4-lake", client=client)
 
     uploaded = adapter.upload_run_artifacts(
         output_path=parquet_path,
@@ -77,3 +77,90 @@ def test_clickhouse_sink_inserts_run_metadata_and_telemetry_events() -> None:
     assert client.inserts[1][0] == "phase4_telemetry_events"
     assert client.inserts[0][1][0][0] == "run-1"
     assert client.inserts[1][1][0][0] == "phase4.transform.completed"
+
+
+def test_supabase_adapter_from_env_uses_expected_variables(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_build_default_client(self, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return FakeS3Client()
+
+    monkeypatch.setenv("SUPABASE_STORAGE_S3_BUCKET", "phase4-lake")
+    monkeypatch.setenv(
+        "SUPABASE_STORAGE_S3_ENDPOINT_URL",
+        "https://project-ref.storage.supabase.co/storage/v1/s3",
+    )
+    monkeypatch.setenv("SUPABASE_STORAGE_S3_ACCESS_KEY_ID", "key-id")
+    monkeypatch.setenv("SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY", "secret")
+    monkeypatch.setenv("SUPABASE_STORAGE_S3_REGION", "us-east-1")
+    monkeypatch.setattr(
+        SupabaseObjectStorageAdapter,
+        "_build_default_client",
+        fake_build_default_client,
+    )
+
+    adapter = SupabaseObjectStorageAdapter.from_env()
+
+    assert adapter.bucket == "phase4-lake"
+    assert captured["endpoint_url"] == "https://project-ref.storage.supabase.co/storage/v1/s3"
+    assert captured["aws_access_key_id"] == "key-id"
+    assert captured["aws_secret_access_key"] == "secret"
+    assert captured["region_name"] == "us-east-1"
+
+
+def test_clickhouse_sink_from_env_uses_expected_variables(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_build_default_client(self, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return FakeClickHouseClient()
+
+    monkeypatch.setenv("CLICKHOUSE_HOST", "clickhouse.internal")
+    monkeypatch.setenv("CLICKHOUSE_PORT", "8443")
+    monkeypatch.setenv("CLICKHOUSE_USERNAME", "analytics")
+    monkeypatch.setenv("CLICKHOUSE_PASSWORD", "secret")
+    monkeypatch.setenv("CLICKHOUSE_DATABASE", "phase4")
+    monkeypatch.setenv("CLICKHOUSE_SECURE", "true")
+    monkeypatch.setattr(
+        ClickHouseTelemetrySink,
+        "_build_default_client",
+        fake_build_default_client,
+    )
+
+    sink = ClickHouseTelemetrySink.from_env()
+
+    assert sink.client is not None
+    assert captured["host"] == "clickhouse.internal"
+    assert captured["port"] == 8443
+    assert captured["username"] == "analytics"
+    assert captured["password"] == "secret"
+    assert captured["database"] == "phase4"
+    assert captured["secure"] is True
+
+
+def test_clickhouse_sink_from_env_normalizes_full_url_host(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_build_default_client(self, **kwargs):  # type: ignore[no-untyped-def]
+        captured.update(kwargs)
+        return FakeClickHouseClient()
+
+    monkeypatch.setenv("CLICKHOUSE_HOST", "https://clickhouse.example")
+    monkeypatch.setenv("CLICKHOUSE_PORT", "8443")
+    monkeypatch.setenv("CLICKHOUSE_USERNAME", "analytics")
+    monkeypatch.setenv("CLICKHOUSE_PASSWORD", "secret")
+    monkeypatch.setenv("CLICKHOUSE_DATABASE", "phase4")
+    monkeypatch.setenv("CLICKHOUSE_SECURE", "true")
+    monkeypatch.setattr(
+        ClickHouseTelemetrySink,
+        "_build_default_client",
+        fake_build_default_client,
+    )
+
+    sink = ClickHouseTelemetrySink.from_env()
+
+    assert sink.client is not None
+    assert captured["host"] == "clickhouse.example"
+    assert captured["port"] == 8443
+    assert captured["secure"] is True
