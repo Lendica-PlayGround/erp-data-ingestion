@@ -1,0 +1,254 @@
+{
+  "table": "customers",
+  "columns": [
+    {
+      "name": "external_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Unique identifier for each customer."
+    },
+    {
+      "name": "name",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Full name of the customer."
+    },
+    {
+      "name": "is_supplier",
+      "datatype": "boolean",
+      "domain": {
+        "kind": "categories",
+        "values": ["True", "False"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Indicates if the entity is a supplier."
+    },
+    {
+      "name": "is_customer",
+      "datatype": "boolean",
+      "domain": {
+        "kind": "categories",
+        "values": ["True", "False"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Indicates if the entity is a customer."
+    },
+    {
+      "name": "email_address",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Email address of the customer."
+    },
+    {
+      "name": "tax_number",
+      "datatype": "number",
+      "domain": {
+        "kind": "range",
+        "min": 0,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Tax identification number of the customer."
+    },
+    {
+      "name": "status",
+      "datatype": "string",
+      "domain": {
+        "kind": "categories",
+        "values": ["ACTIVE", "INACTIVE"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Current status of the customer."
+    },
+    {
+      "name": "currency",
+      "datatype": "string",
+      "domain": {
+        "kind": "categories",
+        "values": ["USD", "EUR"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "currency"
+      },
+      "description": "Preferred currency of the customer."
+    },
+    {
+      "name": "remote_updated_at",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp of the last update from the remote system."
+    },
+    {
+      "name": "phone_number",
+      "datatype": "number",
+      "domain": {
+        "kind": "range",
+        "min": 0,
+        "max": null,
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Phone number of the customer."
+    },
+    {
+      "name": "addresses",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "none"
+      },
+      "description": "Addresses associated with the customer."
+    },
+    {
+      "name": "remote_was_deleted",
+      "datatype": "boolean",
+      "domain": {
+        "kind": "categories",
+        "values": ["True", "False"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Indicates if the record was deleted in the remote system."
+    },
+    {
+      "name": "_unmapped",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "none"
+      },
+      "description": "Additional unmapped data from the source system."
+    },
+    {
+      "name": "_source_system",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "The source system from which the data was ingested."
+    },
+    {
+      "name": "_source_record_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "The original record ID from the source system."
+    },
+    {
+      "name": "_company_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Identifier for the company associated with the record."
+    },
+    {
+      "name": "_ingested_at",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp when the data was ingested into the system."
+    },
+    {
+      "name": "_source_file",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "File path of the source data file."
+    },
+    {
+      "name": "_mapping_version",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Version of the mapping used for data ingestion."
+    },
+    {
+      "name": "_row_hash",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Hash of the row data for integrity verification."
+    }
+  ]
+}
