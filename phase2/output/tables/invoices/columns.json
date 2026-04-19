@@ -1,0 +1,30 @@
+{
+  "table": "invoices",
+  "columns": [
+    {"name": "external_id", "datatype": "string", "domain": {"kind": "regex", "pattern": "^in_[A-Za-z0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Unique identifier for the invoice in the source system."},
+    {"name": "type", "datatype": "string", "domain": {"kind": "categories", "values": ["ACCOUNTS_RECEIVABLE"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Type of the invoice, typically accounts receivable."},
+    {"name": "number", "datatype": "string", "domain": {"kind": "regex", "pattern": "^INV-[0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Invoice number assigned to the transaction."},
+    {"name": "contact_external_id", "datatype": "string", "domain": {"kind": "regex", "pattern": "^cus_[A-Za-z0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Identifier for the customer associated with the invoice."},
+    {"name": "issue_date", "datatype": "datetime", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Date when the invoice was issued."},
+    {"name": "due_date", "datatype": "datetime", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Date when the invoice is due."},
+    {"name": "paid_on_date", "datatype": "datetime", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Date when the invoice was paid, if applicable."},
+    {"name": "memo", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "Additional notes or description for the invoice."},
+    {"name": "currency", "datatype": "string", "domain": {"kind": "categories", "values": ["USD", "EUR"], "missing": "null"}, "unit": {"kind": "currency"}, "description": "Currency in which the invoice is issued."},
+    {"name": "exchange_rate", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "none"}, "description": "Exchange rate applicable if the invoice currency is different from the base currency."},
+    {"name": "total_discount", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Total discount applied to the invoice."},
+    {"name": "sub_total", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Subtotal amount before taxes and discounts."},
+    {"name": "total_tax_amount", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Total tax amount applied to the invoice."},
+    {"name": "total_amount", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Total amount of the invoice including taxes."},
+    {"name": "balance", "datatype": "number", "domain": {"kind": "range", "min": 0, "max": null, "missing": "null"}, "unit": {"kind": "currency"}, "description": "Remaining balance to be paid on the invoice."},
+    {"name": "status", "datatype": "string", "domain": {"kind": "categories", "values": ["PAID", "OPEN"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Current status of the invoice."},
+    {"name": "remote_was_deleted", "datatype": "boolean", "domain": {"kind": "categories", "values": [true, false], "missing": "null"}, "unit": {"kind": "none"}, "description": "Indicates if the invoice was deleted in the source system."},
+    {"name": "_unmapped", "datatype": "object", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "none"}, "description": "Additional unmapped data from the source system."},
+    {"name": "_source_system", "datatype": "string", "domain": {"kind": "categories", "values": ["stripe"], "missing": "null"}, "unit": {"kind": "category"}, "description": "Source system from which the invoice data was retrieved."},
+    {"name": "_source_record_id", "datatype": "string", "domain": {"kind": "regex", "pattern": "^in_[A-Za-z0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Original record ID in the source system."},
+    {"name": "_company_id", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-z0-9-]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Identifier for the company associated with the invoice."},
+    {"name": "_ingested_at", "datatype": "datetime", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "datetime"}, "description": "Timestamp when the invoice data was ingested."},
+    {"name": "_source_file", "datatype": "string", "domain": {"kind": "text", "missing": "null"}, "unit": {"kind": "text"}, "description": "File path of the source file from which the data was ingested."},
+    {"name": "_mapping_version", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-z]+\\.[a-z]+@[0-9]+\\.[0-9]+\\.[0-9]+$", "missing": "null"}, "unit": {"kind": "text"}, "description": "Version of the mapping used for data ingestion."},
+    {"name": "_row_hash", "datatype": "string", "domain": {"kind": "regex", "pattern": "^[a-f0-9]+$", "missing": "null"}, "unit": {"kind": "identifier"}, "description": "Hash of the row data for integrity verification."}
+  ]
+}

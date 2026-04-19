@@ -1,0 +1,69 @@
+## Phase 2: Exploration Agent
+
+### Input
+User input similar to Openclaw. Users can start with any of the following:
+
+- File upload for dataset preview (CSVs, JSONs)
+- Provide an API key / endpoint / documentation
+- Upload files for documentation, memos, and business manual exploration
+- URL to explore
+- User interaction and guidance
+
+---
+
+### Output
+
+#### Structured Table Description
+
+- **Table Name**
+- **Table Summary**  
+  A high-level description of what business process this table represents
+
+- **Linkages / Relationships with Other Tables**
+- **What Each Row Represents**
+
+- **Datasource**  
+  Where the agent got the information
+
+- **Data Retrieval Process**  
+  What is the process for pulling this dataset
+
+---
+
+#### Structured Table Column Info
+
+For each field:
+
+- **Field Datatype**  
+  e.g., string, int, char, etc.
+
+- **Field Domain**  
+  Range of values the field can take:
+  - List of categories
+  - Range of numbers
+  - Text
+  - Regex constraints
+  - How missing data is indicated
+
+- **Unit of the Field**  
+  - Numerical: percent, currency, rating scale, etc.
+  - Non-numerical: unique identifier, category, degree, text, etc.
+
+- **Field Description**  
+  A natural language summary of what the field represents
+
+---
+
+### UI Requirements
+
+- A chatbot interface with:
+  - File upload capability
+  - Group chat-style interaction
+
+- A real-time update screen where:
+  - Changes are visible as they happen
+  - The chatbot updates files in the codebase
+
+- Versioning behavior:
+  - The chatbot periodically commits updates
+  - Users can track progress over time

@@ -1,0 +1,223 @@
+{
+  "table": "contacts",
+  "columns": [
+    {
+      "name": "external_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Unique identifier for the contact."
+    },
+    {
+      "name": "first_name",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "First name of the contact."
+    },
+    {
+      "name": "last_name",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Last name of the contact."
+    },
+    {
+      "name": "account_external_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Identifier for the account associated with the contact."
+    },
+    {
+      "name": "addresses",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Addresses associated with the contact."
+    },
+    {
+      "name": "email_addresses",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Email addresses associated with the contact."
+    },
+    {
+      "name": "phone_numbers",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Phone numbers associated with the contact."
+    },
+    {
+      "name": "last_activity_at",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp of the last activity of the contact."
+    },
+    {
+      "name": "remote_created_at",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp when the contact was created in the remote system."
+    },
+    {
+      "name": "remote_was_deleted",
+      "datatype": "boolean",
+      "domain": {
+        "kind": "categories",
+        "values": ["True", "False"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Indicates if the contact was deleted in the remote system."
+    },
+    {
+      "name": "_unmapped",
+      "datatype": "object",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Unmapped fields from the source system."
+    },
+    {
+      "name": "_source_system",
+      "datatype": "string",
+      "domain": {
+        "kind": "categories",
+        "values": ["google_sheets"],
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "category"
+      },
+      "description": "Source system from which the contact data was ingested."
+    },
+    {
+      "name": "_source_record_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Record ID in the source system."
+    },
+    {
+      "name": "_company_id",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "identifier"
+      },
+      "description": "Company ID associated with the contact."
+    },
+    {
+      "name": "_ingested_at",
+      "datatype": "datetime",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "datetime"
+      },
+      "description": "Timestamp when the contact data was ingested."
+    },
+    {
+      "name": "_source_file",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Source file from which the contact data was ingested."
+    },
+    {
+      "name": "_mapping_version",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Version of the mapping used for ingestion."
+    },
+    {
+      "name": "_row_hash",
+      "datatype": "string",
+      "domain": {
+        "kind": "text",
+        "missing": "null"
+      },
+      "unit": {
+        "kind": "text"
+      },
+      "description": "Hash of the row for deduplication purposes."
+    }
+  ]
+}
