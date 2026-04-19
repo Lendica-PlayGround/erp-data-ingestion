@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -13,7 +14,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..settings import BACKEND_DIR, get_settings
+from ..settings import BACKEND_DIR, Settings, get_settings
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,12 @@ class HandshakeRunBody(BaseModel):
     session_id: str = Field(default="")
 
 
+class HandshakeApplyBody(BaseModel):
+    """Optional session id: source CSVs under uploads/<session>/ are used as mapper inputs."""
+
+    session_id: str = Field(default="")
+
+
 def _truncate(s: str) -> str:
     s = s or ""
     if len(s) <= _MAX_LOG_CHARS:
@@ -70,6 +77,51 @@ def _run_subprocess(
         env=env,
         timeout=timeout,
     )
+
+
+def _resolve_handshake_json(settings: Settings) -> Path | None:
+    """Prefer published workspace copy; fall back to phase2.5/output."""
+    p = settings.output_path / "handshake" / "handshake_mapping.json"
+    if p.is_file():
+        return p
+    alt = _PHASE25 / "output" / "handshake_mapping.json"
+    if alt.is_file():
+        return alt
+    return None
+
+
+def _resolve_mapper_script(settings: Settings) -> Path | None:
+    p = settings.output_path / "handshake" / "handshake_run_mapper.py"
+    if p.is_file():
+        return p
+    alt = _PHASE25 / "output" / "handshake_run_mapper.py"
+    if alt.is_file():
+        return alt
+    return None
+
+
+def _pick_input_for_table(uploads: list[Path], table: str) -> Path | None:
+    """Match an upload to a mid-layer table name (basename heuristics)."""
+    t = table.lower()
+    for p in uploads:
+        if p.stem.lower() == t:
+            return p
+    for p in uploads:
+        s = p.stem.lower()
+        if s.startswith(t + "_") or s.endswith("_" + t):
+            return p
+    for p in uploads:
+        if t in p.stem.lower():
+            return p
+    return None
+
+
+def _phase2_table_csv(phase2_out: Path, phase2_table: str) -> Path | None:
+    d = phase2_out / "tables" / phase2_table
+    if not d.is_dir():
+        return None
+    csvs = sorted(d.glob("*.csv"))
+    return csvs[0] if csvs else None
 
 
 def _publish_artifacts(
@@ -240,4 +292,115 @@ async def run_handshake(body: HandshakeRunBody) -> dict:
         "codegen_ok": codegen_ok,
         "steps": steps,
         "artifacts": artifacts,
+    }
+
+
+@router.post("/handshake/apply")
+async def apply_handshake(body: HandshakeApplyBody) -> dict:
+    """Run ``handshake_run_mapper.py`` for each table, writing mid-layer CSV previews under `handshake/preview/`."""
+    settings = get_settings()
+    mapper = _resolve_mapper_script(settings)
+    if not mapper:
+        raise HTTPException(
+            503,
+            "handshake_run_mapper.py not found. Run “Run handshake” (codegen) first.",
+        )
+    hj = _resolve_handshake_json(settings)
+    if not hj:
+        raise HTTPException(
+            503,
+            "handshake_mapping.json not found. Run handshake (map) first.",
+        )
+
+    try:
+        mapping = json.loads(hj.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(500, f"cannot read handshake JSON: {exc!s}") from exc
+
+    tables = mapping.get("tables") or []
+    if not tables:
+        raise HTTPException(400, "handshake_mapping.json has no tables.")
+
+    sid = (body.session_id or "").strip()
+    upload_root = (settings.upload_path / sid).resolve() if sid else None
+    uploads = _session_source_files(upload_root) if upload_root and upload_root.is_dir() else []
+    phase2_out = settings.output_path.resolve()
+
+    preview_dir = settings.output_path / "handshake" / "preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+
+    py = sys.executable
+    steps: list[dict] = []
+    outputs: list[str] = []
+    skipped: list[dict] = []
+
+    for entry in tables:
+        mid = (entry.get("midlayer_table") or "").strip()
+        p2 = (entry.get("phase2_table") or "").strip()
+        if not mid:
+            continue
+        input_path = None
+        if uploads:
+            input_path = _pick_input_for_table(uploads, mid)
+        if input_path is None and p2:
+            input_path = _phase2_table_csv(phase2_out, p2)
+        if input_path is None:
+            skipped.append(
+                {
+                    "table": mid,
+                    "phase2_table": p2,
+                    "reason": "no CSV found (upload a file whose name matches the table, "
+                    "or place a .csv under output/tables/<phase2_table>/)",
+                }
+            )
+            continue
+
+        argv = [
+            py,
+            str(mapper),
+            "--input",
+            str(input_path),
+            "--output",
+            str(preview_dir),
+            "--table",
+            mid,
+        ]
+        try:
+            proc = await asyncio.to_thread(
+                _run_subprocess,
+                argv,
+                cwd=mapper.parent,
+                env={k: v for k, v in os.environ.items() if isinstance(v, str)},
+                timeout=600,
+            )
+        except subprocess.TimeoutExpired as exc:
+            log.exception("handshake apply timed out for table %s", mid)
+            raise HTTPException(504, f"Mapper timed out for {mid}.") from exc
+        except Exception as exc:
+            log.exception("handshake apply subprocess failed for %s", mid)
+            raise HTTPException(500, f"mapper failed to start for {mid}: {exc!s}") from exc
+
+        out_rel = f"handshake/preview/{mid}_mapped.csv"
+        out_file = preview_dir / f"{mid}_mapped.csv"
+        ok = proc.returncode == 0 and out_file.is_file()
+        if ok:
+            outputs.append(out_rel)
+        steps.append(
+            {
+                "table": mid,
+                "input": str(input_path),
+                "ok": ok,
+                "returncode": proc.returncode,
+                "stdout": _truncate(proc.stdout),
+                "stderr": _truncate(proc.stderr),
+            }
+        )
+
+    any_ok = any(s.get("ok") for s in steps)
+    return {
+        "ok": any_ok,
+        "outputs": outputs,
+        "skipped": skipped,
+        "steps": steps,
+        "preview_dir": "handshake/preview",
     }

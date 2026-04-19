@@ -6,10 +6,10 @@ import { ArtifactTree } from "./ArtifactTree";
 import { ArtifactViewer } from "./ArtifactViewer";
 import { CommitHistory } from "./CommitHistory";
 import type { ArtifactFile, CommitSummary, UploadedFile } from "@/lib/types";
-import { X } from "lucide-react";
-import { listArtifacts, listCommits } from "@/lib/api";
+import { Loader2, X } from "lucide-react";
+import { applyHandshakeMapper, listArtifacts, listCommits } from "@/lib/api";
 
-type Tab = "files" | "commits" | "uploads";
+type Tab = "files" | "handshake" | "commits" | "uploads";
 
 type Props = {
   sessionId: string;
@@ -17,6 +17,8 @@ type Props = {
   onRemoveUpload: (clientPath: string) => void | Promise<void>;
   changeToken: number;
   commitToken: number;
+  /** Bump when handshake preview files change so the workspace refreshes. */
+  onArtifactsChanged?: () => void;
 };
 
 const RECENT_MS = 10_000;
@@ -27,6 +29,7 @@ export function WorkspacePanel({
   onRemoveUpload,
   changeToken,
   commitToken,
+  onArtifactsChanged,
 }: Props) {
   const [tab, setTab] = useState<Tab>("files");
   const [files, setFiles] = useState<ArtifactFile[]>([]);
@@ -34,7 +37,17 @@ export function WorkspacePanel({
   const [selected, setSelected] = useState<string | null>(null);
   const [recent, setRecent] = useState<Set<string>>(new Set());
   const [viewerKey, setViewerKey] = useState(0);
+  const [applyBusy, setApplyBusy] = useState(false);
   const eventsAbortRef = useRef<AbortController | null>(null);
+
+  const handshakeFiles = files.filter((f) => f.path.startsWith("handshake/"));
+
+  const handshakeViewPath =
+    handshakeFiles.length === 0
+      ? null
+      : handshakeFiles.some((f) => f.path === selected)
+        ? selected
+        : handshakeFiles[0].path;
 
   const refreshFiles = useCallback(async () => {
     try {
@@ -122,10 +135,38 @@ export function WorkspacePanel({
     return () => ac.abort();
   }, [refreshFiles, selected]);
 
+  const runApplyMapper = useCallback(async () => {
+    if (applyBusy) return;
+    setApplyBusy(true);
+    try {
+      const r = await applyHandshakeMapper(sessionId);
+      await refreshFiles();
+      onArtifactsChanged?.();
+      setViewerKey((k) => k + 1);
+      if (r.outputs.length > 0) {
+        setSelected(r.outputs[r.outputs.length - 1]);
+      }
+      if (!r.ok) {
+        const bad = r.steps.find((s) => !s.ok);
+        const err = bad?.stderr?.slice(0, 3000) ?? "";
+        alert(
+          `Mapper finished with errors.\n\n${bad ? `${bad.table} (exit ${bad.returncode})\n${err}` : "No table ran successfully."}`,
+        );
+      } else if (r.skipped.length > 0) {
+        const lines = r.skipped.map((s) => `• ${s.table}: ${s.reason}`).join("\n");
+        alert(`Preview written for ${r.outputs.length} table(s).\n\nSkipped:\n${lines}`);
+      }
+    } catch (e) {
+      alert("Apply mapper failed: " + (e as Error).message);
+    } finally {
+      setApplyBusy(false);
+    }
+  }, [applyBusy, sessionId, refreshFiles, onArtifactsChanged]);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-1 border-b border-ink-700 px-2">
-        {(["files", "commits", "uploads"] as Tab[]).map((t) => (
+        {(["files", "handshake", "commits", "uploads"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -137,10 +178,15 @@ export function WorkspacePanel({
                 : "text-ink-400 hover:text-ink-200",
             )}
           >
-            {t}
+            {t === "handshake" ? "handshake" : t}
             {t === "files" && files.length > 0 && (
               <span className="ml-1.5 rounded-full bg-ink-700 px-1.5 py-0.5 text-[10px] text-ink-200">
                 {files.length}
+              </span>
+            )}
+            {t === "handshake" && handshakeFiles.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-ink-700 px-1.5 py-0.5 text-[10px] text-ink-200">
+                {handshakeFiles.length}
               </span>
             )}
             {t === "commits" && commits.length > 0 && (
@@ -173,6 +219,51 @@ export function WorkspacePanel({
             </div>
             <div className="min-h-0 overflow-hidden">
               <ArtifactViewer path={selected} refreshKey={viewerKey} />
+            </div>
+          </div>
+        )}
+        {tab === "handshake" && (
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ink-800 px-3 py-2">
+              <button
+                type="button"
+                onClick={() => void runApplyMapper()}
+                disabled={applyBusy}
+                title="Run handshake_run_mapper.py for each table: uses session uploads (e.g. contacts.csv) or output/tables/&lt;slug&gt;/*.csv, writes mid-layer CSVs under handshake/preview/"
+                className="inline-flex items-center gap-1.5 rounded-md bg-ink-700 px-3 py-1.5 text-xs font-medium text-ink-50 hover:bg-ink-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {applyBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                ) : null}
+                {applyBusy ? "Applying mapper…" : "Apply mapper & preview"}
+              </button>
+              <span className="text-[11px] leading-snug text-ink-500">
+                Converts uploads to internal (mid-layer) CSVs in{" "}
+                <span className="font-mono text-ink-400">handshake/preview/</span>. Name files like{" "}
+                <span className="font-mono">contacts.csv</span>, <span className="font-mono">invoices.csv</span>.
+              </span>
+            </div>
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(180px,280px)_1fr]">
+              <div className="min-h-0 overflow-hidden border-r border-ink-700">
+                {handshakeFiles.length === 0 ? (
+                  <div className="flex h-full items-center justify-center p-6 text-center text-sm text-ink-400">
+                    No Phase 2.5 handshake files yet. Use <strong className="text-ink-200">Run handshake</strong>{" "}
+                    in the header (map + codegen). Artifacts appear here as{" "}
+                    <span className="font-mono text-ink-300">handshake_mapping.json</span> and{" "}
+                    <span className="font-mono text-ink-300">handshake_run_mapper.py</span>.
+                  </div>
+                ) : (
+                  <ArtifactTree
+                    files={handshakeFiles}
+                    selected={handshakeViewPath}
+                    recent={recent}
+                    onSelect={setSelected}
+                  />
+                )}
+              </div>
+              <div className="min-h-0 overflow-hidden">
+                <ArtifactViewer path={handshakeViewPath} refreshKey={viewerKey} />
+              </div>
             </div>
           </div>
         )}
