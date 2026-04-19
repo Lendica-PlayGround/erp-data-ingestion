@@ -15,15 +15,31 @@ from langchain_core.tools import StructuredTool
 from agent.models.mapping_contract import MappingContract
 from agent.models.onboarding import ColumnDescription, OnboardingState, TableDescription
 from agent.runtime.context import RunContext
+from agent.runtime.session_memory import build_recommended_plan, heuristic_research_for_state
 from agent.runtime.transitions import assert_transition, transition_allowed
 
 
-def _uuid(run_id: str) -> UUID:
-    return UUID(run_id.strip())
+def _resolve_run_id(ctx: RunContext, run_id: str | None) -> UUID:
+    """Resolve a tool-supplied run identifier to the bound session.
+
+    The LLM already operates inside a single bound onboarding session. In
+    practice it may still emit placeholders like "", "current", or other
+    malformed values for `run_id`. Treat those as the current session instead
+    of crashing the whole turn.
+    """
+    if run_id is None:
+        return ctx.run_id
+    value = run_id.strip()
+    if not value or value.lower() in {"current", "current_run", "this_run", "session", "bound"}:
+        return ctx.run_id
+    try:
+        return UUID(value)
+    except (ValueError, AttributeError):
+        return ctx.run_id
 
 
 def _run(ctx: RunContext, run_id: str) -> OnboardingState:
-    rid = _uuid(run_id)
+    rid = _resolve_run_id(ctx, run_id)
     if rid != ctx.run_id:
         raise ValueError("run_id does not match bound session")
     st = ctx.store.get(rid)
@@ -39,7 +55,7 @@ def _state_store_impl(
     patch_json: str | None = None,
     new_state: str | None = None,
 ) -> str:
-    rid = _uuid(run_id)
+    rid = _resolve_run_id(ctx, run_id)
     if rid != ctx.run_id:
         return json.dumps({"ok": False, "error": "run_id mismatch"})
     if operation == "get":
@@ -101,44 +117,80 @@ def _validate_credentials_impl(
 
 
 def _research_vendor_impl(ctx: RunContext, run_id: str, query: str) -> str:
-    _run(ctx, run_id)
+    st = _run(ctx, run_id)
+    if st.source.system == "unknown":
+        return json.dumps({"ok": False, "error": "source_system_unknown"})
+
+    def blocker_list(message: str) -> list[dict[str, Any]]:
+        existing = [b.model_dump(mode="json") for b in st.blockers if b.code != "research_unavailable"]
+        existing.append(
+            {
+                "code": "research_unavailable",
+                "message": message,
+                "needs": "research",
+            }
+        )
+        return existing
+
+    def persist_research(summary: dict[str, Any], urls: list[str], blockers: list[dict[str, Any]] | None = None) -> str:
+        temp = st.model_copy(deep=True)
+        temp.research_summary = type(temp.research_summary).model_validate(summary)
+        temp.recommended_plan = build_recommended_plan(temp)
+        patch: dict[str, Any] = {
+            "research_summary": temp.research_summary.model_dump(mode="json"),
+            "recommended_plan": temp.recommended_plan.model_dump(mode="json"),
+            "open_questions": temp.research_summary.open_questions,
+            "next_question": (
+                temp.research_summary.open_questions[0]
+                if temp.research_summary.open_questions
+                else st.next_question
+            ),
+        }
+        if urls:
+            patch["artifacts_collected"] = [
+                {
+                    "kind": "api_doc_url",
+                    "uri": u,
+                    "ingested_at": datetime.now(timezone.utc).isoformat(),
+                }
+                for u in urls
+            ]
+        if blockers is not None:
+            patch["blockers"] = blockers
+        ctx.store.patch(ctx.run_id, patch, "research_vendor")
+        return json.dumps({"ok": True, "status": summary["status"], "urls": urls})
+
     key = os.getenv("TAVILY_API_KEY")
     if not key:
-        ctx.store.patch(
-            ctx.run_id,
-            {
-                "blockers": [
-                    {
-                        "code": "research_unavailable",
-                        "message": "TAVILY_API_KEY not set",
-                        "needs": "research",
-                    }
-                ]
-            },
-            "research_vendor",
+        research = heuristic_research_for_state(st)
+        blockers = blocker_list("TAVILY_API_KEY not set; using built-in source heuristics.")
+        return persist_research(
+            research.model_dump(mode="json"), research.doc_urls, blockers=blockers
         )
-        return json.dumps({"ok": False, "error": "no_tavily"})
     try:
+        effective_query = query.strip() or f"{st.source.system} ERP API export invoice customer contact"
         r = httpx.post(
             "https://api.tavily.com/search",
-            json={"api_key": key, "query": query, "search_depth": "basic"},
+            json={"api_key": key, "query": effective_query, "search_depth": "basic"},
             timeout=30.0,
         )
         r.raise_for_status()
         results = r.json().get("results") or []
         uris = [str(x.get("url")) for x in results[:5] if x.get("url")]
     except Exception as e:
-        return json.dumps({"ok": False, "error": str(e)})
-    artifacts = [
-        {
-            "kind": "api_doc_url",
-            "uri": u,
-            "ingested_at": datetime.now(timezone.utc).isoformat(),
-        }
-        for u in uris
-    ]
-    ctx.store.patch(ctx.run_id, {"artifacts_collected": artifacts}, "research_vendor")
-    return json.dumps({"ok": True, "urls": uris})
+        research = heuristic_research_for_state(st)
+        blockers = blocker_list(f"Live research failed: {e}")
+        return persist_research(
+            research.model_dump(mode="json"), research.doc_urls, blockers=blockers
+        )
+
+    research = heuristic_research_for_state(st)
+    research.status = "web"
+    research.doc_urls = uris or research.doc_urls
+    research.note = "Collected live vendor URLs and combined them with built-in ERP guidance."
+    research.researched_at = datetime.now(timezone.utc)
+    blockers = [b.model_dump(mode="json") for b in st.blockers if b.code != "research_unavailable"]
+    return persist_research(research.model_dump(mode="json"), research.doc_urls, blockers=blockers)
 
 
 def _profile_table_impl(

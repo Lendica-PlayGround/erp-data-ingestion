@@ -13,3 +13,19 @@ All code for the onboarding agent (LangGraph runtime, skills, connector framewor
 | `tests/` | Agent unit tests |
 
 Install from the **repository root** (parent of `mira/`): `pip install -e ".[dev]"`. Python import names are unchanged (`agent`, `framework`, `midlayer`).
+
+## Telegram Setup Notes
+
+For onboarding groups, disable Telegram privacy mode in BotFather (`/setprivacy` -> `Disable`) so Mira can observe normal group replies without forced mentions.
+
+Seed BotFather `/setcommands` with:
+
+- `/ping`
+- `/status`
+- `/plan`
+- `/quiet`
+- `/resume`
+- `/approve_customer`
+- `/approve_fde`
+
+Runtime defaults for the MVP Telegram UX live in `.env.example`, including `TELEGRAM_REQUIRE_MENTION=false`, `MIRA_TG_SMART_POLICY=true`, and the per-chat reply rate limits.

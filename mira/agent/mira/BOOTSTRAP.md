@@ -6,4 +6,4 @@
 4. Ask which objects matter first among **invoice**, **customer**, **contact**.
 5. Request credentials only through the secure flow (`validate_credentials`); never ask them to paste secrets in plain chat if a vault drop is configured.
 
-After this ritual completes for the run, rely on structured discovery rather than repeating the full intro.
+Only do this ritual for a true cold start. If the run summary already includes source, objective, access clues, or prior dialogue, skip the ritual and continue from the current state instead.
