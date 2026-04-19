@@ -26,8 +26,16 @@ Feature and design specs going forward should be added under [`docs/specs/`](./d
 ```text
 apps/      Application code and Django project scaffolding
 docs/      Product requirements, phase specs, and discussion notes
+           - docs/sources/   Raw source-system data formats (e.g. Invoiced.com)
+           - docs/specs/     Feature specs authored before implementation
 schemas/   Mid-layer schema definitions
 seeds/     Example source data and manifests
+           - seeds/generators/gsheets_invoice_feeder.py
+             Stripe-shaped synthetic invoice feeder (legacy demo).
+           - seeds/generators/invoiced/
+             Invoiced.com raw-dump feeder — appends Customers, Contacts,
+             and Invoices every 30s, simulating a recurring API pull.
+             See docs/sources/invoiced-data-format.md for the column contract.
 ```
 
 ## Documentation And Process

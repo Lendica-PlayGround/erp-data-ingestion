@@ -14,8 +14,10 @@ extra wiring:
     amount_remaining, status, created, due_date, finalized_at, description
 
 Auth:
-  - Prefers ``GOOGLE_SHEETS_SA_KEY`` (inline JSON) when present.
-  - Otherwise falls back to ``GOOGLE_APPLICATION_CREDENTIALS`` (file path).
+  - ``GOOGLE_SHEETS_SA_KEY`` (inline JSON), else ``GOOGLE_APPLICATION_CREDENTIALS``
+    (service account key path), else Application Default Credentials
+    (e.g. ``gcloud auth application-default login``). Shared with
+    ``invoiced/sheets.load_credentials``.
 
 Usage:
     # Defaults read from .env (GSHEETS_FEEDER_*).
@@ -35,7 +37,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import os
 import random
@@ -47,9 +48,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Sequence
 
+from .invoiced.sheets import load_credentials
+
 try:
     import gspread
-    from google.oauth2.service_account import Credentials
 except ImportError as exc:  # pragma: no cover - import-time guard
     raise SystemExit(
         "Missing dependency: "
@@ -60,11 +62,6 @@ except ImportError as exc:  # pragma: no cover - import-time guard
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
 
 HEADERS: list[str] = [
     "id",
@@ -226,35 +223,6 @@ class InvoiceFactory:
 # Sheet I/O
 # ---------------------------------------------------------------------------
 
-def _load_credentials() -> Credentials:
-    """Resolve service-account creds from env. Inline JSON takes precedence."""
-    inline = os.environ.get("GOOGLE_SHEETS_SA_KEY", "").strip()
-    if inline:
-        try:
-            info = json.loads(inline)
-        except json.JSONDecodeError as exc:
-            raise SystemExit(
-                "GOOGLE_SHEETS_SA_KEY is set but is not valid JSON. "
-                "Paste the full service-account key as a single-line JSON string, "
-                "or unset it and use GOOGLE_APPLICATION_CREDENTIALS instead."
-            ) from exc
-        return Credentials.from_service_account_info(info, scopes=SCOPES)
-
-    path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
-    if path:
-        p = Path(path).expanduser()
-        if not p.is_file():
-            raise SystemExit(
-                f"GOOGLE_APPLICATION_CREDENTIALS={path!r} does not point to a file."
-            )
-        return Credentials.from_service_account_file(str(p), scopes=SCOPES)
-
-    raise SystemExit(
-        "No Google credentials found. Set GOOGLE_SHEETS_SA_KEY (inline JSON) "
-        "or GOOGLE_APPLICATION_CREDENTIALS (path). See .env.example."
-    )
-
-
 def _open_worksheet(client: gspread.Client, spreadsheet_id: str, worksheet: str) -> gspread.Worksheet:
     sh = client.open_by_key(spreadsheet_id)
     try:
@@ -364,7 +332,7 @@ def run(
     if seed is not None:
         random.seed(seed)
 
-    creds = _load_credentials()
+    creds = load_credentials()
     client = gspread.authorize(creds)
     ws = _open_worksheet(client, spreadsheet_id, worksheet)
 

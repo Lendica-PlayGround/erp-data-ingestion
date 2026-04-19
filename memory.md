@@ -47,8 +47,14 @@
 - `README.md` should stay concise and serve as the human-facing summary of project purpose and process
 - `docs/specs/` is the canonical location for feature specs
 - Product-oriented documentation should live in `docs/`
+- `docs/sources/` is the canonical location for raw source-system data formats (e.g. Invoiced.com, Stripe)
+- Invoiced.com source format contract lives at `docs/sources/invoiced-data-format.md`
+- Simulated "raw dump" feeders live under `seeds/generators/<source>/` (one sub-package per source)
+- Convention for landing nested API fields into a flat sheet/CSV: top-level scalars as columns; nested objects/arrays as JSON strings in a `*_json` column (e.g. `items_json`, `metadata_json`)
 
 ### What was tried
 - 2026-04-18: Added root `README.md` and `memory.md`
 - 2026-04-18: Created a design spec for documentation and process rules in `docs/specs/2026-04-18-documentation-process-rules-design.md`
 - 2026-04-18: Created an implementation plan in `docs/superpowers/plans/2026-04-18-documentation-process-rules.md`
+- 2026-04-18: Added `docs/sources/invoiced-data-format.md` recording the raw Invoiced.com API shape for Customers, Contacts, and Invoices
+- 2026-04-18: Added `seeds/generators/invoiced/` feeder — a 30s-cadence simulator that appends Invoiced-shaped Customers/Contacts/Invoices to Google Sheets with realistic onboarding + lifecycle transitions
