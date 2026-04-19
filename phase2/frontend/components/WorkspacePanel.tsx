@@ -38,6 +38,9 @@ export function WorkspacePanel({
   const [recent, setRecent] = useState<Set<string>>(new Set());
   const [viewerKey, setViewerKey] = useState(0);
   const [applyBusy, setApplyBusy] = useState(false);
+  /** Client path ``uploads/...`` for uploads-tab preview. */
+  const [uploadSelected, setUploadSelected] = useState<string | null>(null);
+  const [uploadViewerKey, setUploadViewerKey] = useState(0);
   const eventsAbortRef = useRef<AbortController | null>(null);
 
   const handshakeFiles = files.filter((f) => f.path.startsWith("handshake/"));
@@ -74,6 +77,18 @@ export function WorkspacePanel({
     refreshFiles();
     setViewerKey((k) => k + 1);
   }, [changeToken, refreshFiles]);
+
+  useEffect(() => {
+    if (uploads.length === 0) {
+      setUploadSelected(null);
+      return;
+    }
+    setUploadSelected((prev) => {
+      if (prev && uploads.some((u) => u.path === prev)) return prev;
+      return uploads[0].path;
+    });
+    setUploadViewerKey((k) => k + 1);
+  }, [uploads]);
 
   useEffect(() => {
     refreshCommits();
@@ -268,7 +283,28 @@ export function WorkspacePanel({
           </div>
         )}
         {tab === "commits" && <CommitHistory commits={commits} />}
-        {tab === "uploads" && <UploadList uploads={uploads} onRemoveUpload={onRemoveUpload} />}
+        {tab === "uploads" && (
+          <div className="grid h-full min-h-0 grid-cols-[minmax(180px,280px)_1fr]">
+            <div className="min-h-0 overflow-hidden border-r border-ink-700">
+              <UploadList
+                uploads={uploads}
+                selected={uploadSelected}
+                onSelect={(path) => {
+                  setUploadSelected(path);
+                  setUploadViewerKey((k) => k + 1);
+                }}
+                onRemoveUpload={onRemoveUpload}
+              />
+            </div>
+            <div className="min-h-0 overflow-hidden">
+              <ArtifactViewer
+                sessionId={sessionId}
+                path={uploadSelected}
+                refreshKey={uploadViewerKey}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -276,9 +312,13 @@ export function WorkspacePanel({
 
 function UploadList({
   uploads,
+  selected,
+  onSelect,
   onRemoveUpload,
 }: {
   uploads: UploadedFile[];
+  selected: string | null;
+  onSelect: (clientPath: string) => void;
   onRemoveUpload: (clientPath: string) => void | Promise<void>;
 }) {
   if (uploads.length === 0) {
@@ -289,25 +329,39 @@ function UploadList({
     );
   }
   return (
-    <ul className="divide-y divide-ink-800">
-      {uploads.map((u) => (
-        <li key={u.path} className="flex items-center gap-2 px-2 py-2 text-sm">
-          <span className="min-w-0 flex-1 truncate font-mono text-[12px] text-ink-100">{u.name}</span>
-          <span className="shrink-0 text-[11px] text-ink-400">{fmtSize(u.size)}</span>
-          {u.content_type && (
-            <span className="hidden shrink-0 text-[11px] text-ink-500 sm:inline">{u.content_type}</span>
-          )}
-          <button
-            type="button"
-            onClick={() => onRemoveUpload(u.path)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-400 hover:bg-ink-800 hover:text-ink-100"
-            title="Remove"
-            aria-label={`Remove ${u.name}`}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </li>
-      ))}
+    <ul className="h-full overflow-y-auto p-2">
+      {uploads.map((u) => {
+        const isSel = selected === u.path;
+        return (
+          <li key={u.path}>
+            <div
+              className={clsx(
+                "flex items-center gap-1 rounded-md px-2 py-1.5",
+                isSel ? "bg-brand/20 text-ink-50" : "text-ink-200 hover:bg-ink-800",
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(u.path)}
+                className="min-w-0 flex-1 truncate text-left font-mono text-[12px]"
+                title="View file"
+              >
+                {u.name}
+              </button>
+              <span className="shrink-0 text-[10px] text-ink-500">{fmtSize(u.size)}</span>
+              <button
+                type="button"
+                onClick={() => onRemoveUpload(u.path)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ink-400 hover:bg-ink-800 hover:text-ink-100"
+                title="Remove"
+                aria-label={`Remove ${u.name}`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 }
