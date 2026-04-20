@@ -22,6 +22,25 @@ class FakeClickHouseClient:
         self.inserts.append((table, data, column_names))
 
 
+class FakeQueryClient:
+    def __init__(self) -> None:
+        self.queries: list[tuple[str, dict[str, object]]] = []
+
+    def query(self, sql: str, parameters: dict[str, object]):
+        self.queries.append((sql, parameters))
+        return type(
+            "Result",
+            (),
+            {
+                "result_rows": [
+                    [
+                        "phase4.transform.completed",
+                        "2026-04-18T08:00:00+00:00",
+                        '{"run_id":"run-1","table":"invoice"}',
+                    ]
+                ]
+            },
+        )()
 def test_supabase_adapter_uploads_parquet_and_manifest_with_bucket_keys(tmp_path: Path) -> None:
     parquet_path = tmp_path / "company_id=company_123/table=invoice/sync_type=initial/date=2026-04-18/run_id=run-1/invoice.parquet"
     manifest_path = parquet_path.with_name("manifest.json")
@@ -164,3 +183,12 @@ def test_clickhouse_sink_from_env_normalizes_full_url_host(monkeypatch) -> None:
     assert captured["host"] == "clickhouse.example"
     assert captured["port"] == 8443
     assert captured["secure"] is True
+
+
+def test_clickhouse_sink_lists_recent_events_for_run() -> None:
+    sink = ClickHouseTelemetrySink(client=FakeQueryClient())
+
+    rows = sink.list_events(run_id="run-1", limit=10)
+
+    assert rows[0]["event_name"] == "phase4.transform.completed"
+    assert rows[0]["attributes"]["table"] == "invoice"

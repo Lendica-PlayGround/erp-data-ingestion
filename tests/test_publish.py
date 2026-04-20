@@ -30,8 +30,8 @@ def test_phase4_publisher_uploads_artifacts_and_writes_clickhouse_records(tmp_pa
     input_csv.write_text(
         "\n".join(
             [
-                "id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status",
-                "inv_internal_1,src_inv_1,INV-001,contact_123,company_123,2026-04-18T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN",
+                "external_id,number,contact_external_id,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status,remote_was_deleted,_source_record_id,_company_id",
+                "inv_internal_1,INV-001,contact_123,2026-04-18T00:00:00Z,2026-04-30T00:00:00Z,USD,100.0,5.0,105.0,25.0,OPEN,false,src_inv_1,company_123",
             ]
         ),
         encoding="utf-8",

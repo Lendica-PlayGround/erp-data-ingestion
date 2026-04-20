@@ -236,6 +236,7 @@ class OnboardingState(BaseModel):
     ui_preferences: UiPreferences = Field(default_factory=UiPreferences)
     conversation_history: list[ConversationTurn] = Field(default_factory=list)
     phase3: dict[str, Any] = Field(default_factory=dict)
+    phase4: dict[str, Any] = Field(default_factory=dict)
     """PR URLs, dry-run summaries, dashboard URL, etc. (extensible)."""
 
     def apply_patch(self, patch: dict[str, Any]) -> None:

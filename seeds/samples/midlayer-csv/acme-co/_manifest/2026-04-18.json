@@ -1,0 +1,46 @@
+{
+  "schema_version": "v1",
+  "run_date": "2026-04-18",
+  "run_id": "phase4-demo-20260418",
+  "company_id": "acme-co",
+  "generated_at": "2026-04-18T08:00:25Z",
+  "runs": [
+    {
+      "table": "invoices",
+      "sync_type": "initial",
+      "file": "acme-co/invoices/initial/acme-co_invoices_initial_20260418.csv",
+      "sha256": "sha-invoices-initial",
+      "row_count": 3,
+      "reject_count": 0,
+      "source_system": "stripe",
+      "mapping_version": "stripe.invoice@0.1.0"
+    },
+    {
+      "table": "customers",
+      "sync_type": "initial",
+      "file": "acme-co/customers/initial/acme-co_customers_initial_20260418.csv",
+      "sha256": "sha-customers-initial",
+      "row_count": 3,
+      "reject_count": 0,
+      "source_system": "stripe",
+      "mapping_version": "stripe.customer@0.1.0"
+    },
+    {
+      "table": "contacts",
+      "sync_type": "initial",
+      "file": "acme-co/contacts/initial/acme-co_contacts_initial_20260418.csv",
+      "sha256": "sha-contacts-initial",
+      "row_count": 3,
+      "reject_count": 0,
+      "source_system": "google_sheets",
+      "mapping_version": "gsheets.contact@0.1.0"
+    }
+  ],
+  "validation": {
+    "pydantic_validation_passed": true,
+    "row_count_parity": true,
+    "non_null_required_fields": true,
+    "currency_amount_consistency": true,
+    "primary_key_unique": true
+  }
+}

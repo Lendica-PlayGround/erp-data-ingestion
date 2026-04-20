@@ -9,14 +9,6 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from agent.models.onboarding import OnboardingState, SourceProfile
-from agent.runtime.context import RunContext
-from agent.runtime.graph import build_mira_graph
-from agent.runtime.session_memory import (
-    append_conversation_turn,
-    maybe_capture_message_facts,
-    recent_dialogue_messages,
-)
-from agent.runtime.telegram_bot import run_polling
 from agent.stores.supabase_store import store_from_env
 
 
@@ -42,6 +34,14 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_chat(args: argparse.Namespace) -> int:
+    from agent.runtime.context import RunContext
+    from agent.runtime.graph import build_mira_graph
+    from agent.runtime.session_memory import (
+        append_conversation_turn,
+        maybe_capture_message_facts,
+        recent_dialogue_messages,
+    )
+
     store = store_from_env()
     rid = UUID(args.run_id)
     st = store.get(rid)
@@ -63,6 +63,8 @@ def cmd_chat(args: argparse.Namespace) -> int:
 
 
 def cmd_telegram(args: argparse.Namespace) -> int:
+    from agent.runtime.telegram_bot import run_polling
+
     store = store_from_env()
     rid_str = os.environ.get("MIRA_RUN_ID") or getattr(args, "run_id", "")
     if not rid_str:
