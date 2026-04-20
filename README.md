@@ -70,4 +70,76 @@ The first Phase 4/5 runtime slice is now implemented:
 - [`mira/supabase/load_target_from_mid.py`](./mira/supabase/load_target_from_mid.py) promotes `mid_*` rows into `target_*` tables so the current repo has a runnable mid-to-target path.
 - [`docs/0005-phase4-5-observability-validation.md`](./docs/0005-phase4-5-observability-validation.md) is the implementation-ready spec for the remaining Phase 4/5 work.
 
-Install locally from repo root: `pip install -e ".[dev]"` (optional: `[supabase]`, `[dashboard]`). Entrypoint: `mira --help`.
+Install locally from repo root for Mira-only work: `pip install -e ".[dev]"` (optional: `.[supabase]`, `.[dashboard]`).
+
+## Bootstrap
+
+### 1. Create a virtual environment
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2. Initialize environment variables
+
+```bash
+cp .env.example .env
+```
+
+Fill in the values you need for:
+- Django / Postgres
+- Supabase Phase 1 bucket access
+- Mira / OpenAI / Telegram if you are running Phase 2–3
+- Supabase S3 storage for Phase 4 artifacts (`SUPABASE_STORAGE_S3_*`)
+- ClickHouse
+
+The Django settings load `.env` automatically from the repo root.
+
+### 3. Verify the Phase 4 package
+
+```bash
+export PYTHONPATH=$PWD/src
+pytest -q tests
+```
+
+### 4. Verify Mira
+
+```bash
+PYTHONPATH=$PWD/mira pytest -q mira/tests
+```
+
+### 5. Verify Django
+
+```bash
+python apps/django_api/manage.py check
+```
+
+### 6. Initialize Phase 4 publisher from env
+
+```python
+from erp_data_ingestion.publish import Phase4Publisher
+
+publisher = Phase4Publisher.from_env()
+```
+
+### 7. Run the Phase 4 demo dashboard
+
+1. Ensure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_S3_*`,
+   `CLICKHOUSE_*`, and `MIRA_JWT_SECRET` are set in `.env`.
+2. Start the dashboard:
+
+```bash
+PYTHONPATH=$PWD/src:$PWD/mira python -m agent.runtime.cli dashboard
+```
+
+3. Open the JWT-scoped Phase 4 page:
+
+```text
+http://127.0.0.1:8090/dashboard/phase4?token=<jwt>
+```
+
+4. Click `Start Phase 4 Demo` and verify Supabase artifact uploads and
+   ClickHouse events.

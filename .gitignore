@@ -110,3 +110,6 @@ phase2/backend/uploads/
 phase2/backend/.venv/
 phase2/frontend/node_modules/
 phase2/frontend/.next/
+.worktrees/
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,14 @@
+{
+  "schema_version": "v1",
+  "table": "customers",
+  "company_id": "acme-co",
+  "source_system": "stripe",
+  "sync_type": "initial",
+  "run_id": "phase4-demo-20260418",
+  "source_run_id": "airflow:stripe_customers_initial__2026-04-18",
+  "mapping_version": "stripe.customer@0.1.0",
+  "generated_at": "2026-04-18T08:00:15Z",
+  "row_count": 3,
+  "reject_count": 0,
+  "sha256": "sha-customers-initial"
+}
