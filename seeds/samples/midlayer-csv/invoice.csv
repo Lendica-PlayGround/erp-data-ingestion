@@ -1,0 +1,2 @@
+id,remote_id,number,contact,company,issue_date,due_date,currency,sub_total,total_tax_amount,total_amount,balance,status
+inv_internal_1,src_inv_1,INV-001,contact_internal_1,company_123,2026-04-19T00:00:00+00:00,2026-04-30T00:00:00+00:00,USD,100.0,5.0,105.0,25.0,OPEN
